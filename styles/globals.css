@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Exo+2:wght@700;800;900&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #080618;
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+}
+
+input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(170,235,58,0.3);
+  background: rgba(255,255,255,0.05);
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  outline: none;
+}
+
+input::placeholder { color: rgba(255,255,255,0.35); }
+input:focus { border-color: #AAEB3A; }
+
+button {
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+}
