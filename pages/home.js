@@ -74,6 +74,7 @@ export default function Home() {
   const initials = (profile.full_name || 'R').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
 
   return (
+    <>
     <div style={C.page}>
       <div style={C.header}>
         <div style={C.row}>
@@ -143,5 +144,6 @@ export default function Home() {
       </div>
     </div>
     <Navbar active="home" />
+    </>
   )
 }
