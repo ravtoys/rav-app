@@ -174,6 +174,7 @@ export default function Admin() {
             <div>
               <p style={C.userName}>{user.full_name || 'Sin nombre'}</p>
               <p style={C.userEmail}>{user.email || 'Sin email'}</p>
+              <p style={C.userEmail}>{user.phone || 'Sin teléfono'}</p>
               <span style={C.userLevel}>{getLevel(user.points || 0)}</span>
             </div>
             <div>
