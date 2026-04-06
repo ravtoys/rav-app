@@ -65,7 +65,7 @@ export default function Admin() {
 
   const loadUsers = async () => {
     setLoading(true)
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('admin_users').select('*').order('created_at', { ascending: false })
     setUsers(data || [])
     setLoading(false)
   }
