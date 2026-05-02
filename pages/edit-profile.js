@@ -9,8 +9,10 @@ const C = {
   title: { fontFamily:"'Exo 2',sans-serif", fontSize:18, fontWeight:900, color:'white' },
   body: { padding:'24px 20px' },
   avatarWrap: { display:'flex', flexDirection:'column', alignItems:'center', marginBottom:28 },
-  avatar: { width:120, height:120, borderRadius:'50%', objectFit:'cover', border:'3px solid #AAEB3A', background:'rgba(170,235,58,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:48, color:'#AAEB3A', fontWeight:900, overflow:'hidden' },
-  avatarBtn: { marginTop:14, background:'rgba(170,235,58,0.15)', border:'1px solid #AAEB3A', color:'#AAEB3A', padding:'8px 18px', borderRadius:20, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  avatar: { position:'relative', width:120, height:120, borderRadius:'50%', objectFit:'cover', border:'3px solid #AAEB3A', background:'rgba(170,235,58,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:48, color:'#AAEB3A', fontWeight:900, overflow:'visible', cursor:'pointer' },
+  avatarInner: { width:'100%', height:'100%', borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' },
+  cameraBadge: { position:'absolute', bottom:2, right:2, width:36, height:36, borderRadius:'50%', background:'#AAEB3A', border:'3px solid #080618', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 },
+  hint: { marginTop:14, fontSize:12, color:'rgba(170,235,58,0.6)', fontWeight:700 },
   label: { fontSize:12, fontWeight:800, color:'rgba(170,235,58,0.6)', letterSpacing:1, marginBottom:8, display:'block' },
   input: { width:'100%', padding:'14px 16px', borderRadius:12, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:15, outline:'none', marginBottom:20 },
   btn: { width:'100%', padding:'15px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:16, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
@@ -92,13 +94,16 @@ export default function EditProfile() {
       </div>
       <div style={C.body}>
         <div style={C.avatarWrap}>
-          <div style={C.avatar}>
-            {avatarUrl ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : initial}
+          <div style={C.avatar} onClick={() => !uploading && fileInputRef.current?.click()}>
+            <div style={C.avatarInner}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                : initial}
+            </div>
+            <div style={C.cameraBadge}>{uploading ? '⏳' : '📷'}</div>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleAvatarUpload} />
-          <button style={C.avatarBtn} onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-            {uploading ? 'Subiendo...' : 'Cambiar foto'}
-          </button>
+          <p style={C.hint}>{uploading ? 'Subiendo...' : 'Toca la foto para cambiarla'}</p>
         </div>
 
         {msg && <div style={C.success}>{msg}</div>}
