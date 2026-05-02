@@ -9,7 +9,8 @@ const C = {
   row: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 },
   greeting: { fontSize:12, color:'rgba(170,235,58,0.6)', fontWeight:700 },
   name: { fontFamily:"'Exo 2',sans-serif", fontSize:19, fontWeight:900, color:'white', marginTop:2 },
-  avatar: { width:40, height:40, borderRadius:'50%', background:'#AAEB3A', border:'2px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#080618' },
+  avatar: { width:44, height:44, borderRadius:'50%', background:'#AAEB3A', border:'2px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#080618', overflow:'hidden', cursor:'pointer' },
+  avatarImg: { width:'100%', height:'100%', objectFit:'cover' },
   card: { background:'rgba(170,235,58,0.07)', border:'1px solid rgba(170,235,58,0.3)', borderRadius:18, padding:16 },
   cardTop: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 },
   cardLabel: { fontSize:10, color:'rgba(170,235,58,0.6)', fontWeight:800, letterSpacing:1 },
@@ -82,7 +83,11 @@ export default function Home() {
             <p style={C.greeting}>¡Bienvenido de vuelta,</p>
             <p style={C.name}>{profile.full_name || 'Explorador'} 👽</p>
           </div>
-          <div style={C.avatar}>{initials}</div>
+          <div style={C.avatar} onClick={() => router.push('/edit-profile')}>
+            {profile.avatar_url
+              ? <img src={profile.avatar_url} alt="avatar" style={C.avatarImg} />
+              : initials}
+          </div>
         </div>
         <div style={C.card}>
           <div style={C.cardTop}>
@@ -100,7 +105,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
       <div style={C.body}>
         <p style={C.sectionTitle}>MISIONES</p>
         <div style={C.grid}>
@@ -125,7 +129,6 @@ export default function Home() {
             <p style={C.gridSubDim}>Próximamente</p>
           </div>
         </div>
-
         {transactions.length > 0 && (
           <>
             <p style={C.sectionTitle}>ÚLTIMA ACTIVIDAD</p>
