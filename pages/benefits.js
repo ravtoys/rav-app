@@ -44,9 +44,16 @@ const LEVELS = [
   { icon:'🏆', name:'Leyenda', range:'2,000+ ⭐', min:2000 },
 ]
 
+const generateCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return `RAV-${part()}-${part()}`
+}
+
 export default function Benefits() {
   const [points, setPoints] = useState(0)
   const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -66,14 +73,48 @@ export default function Benefits() {
   }
 
   const handleClaim = async (benefit) => {
+    if (busy) return
     if (points < benefit.cost) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const newPoints = points - benefit.cost
-    await supabase.from('profiles').update({ points: newPoints }).eq('id', user.id)
-    await supabase.from('transactions').insert({ user_id: user.id, description: `Canje: ${benefit.title}`, amount: 0, points_change: -benefit.cost })
-    setPoints(newPoints)
-    setMsg(`¡Canjeaste "${benefit.title}"! Un asesor RAV te contactará pronto. 🎉`)
-    setTimeout(() => setMsg(''), 5000)
+    const ok = window.confirm(`¿Canjear ${benefit.cost} estrellas por "${benefit.title}"?`)
+    if (!ok) return
+
+    setBusy(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const newPoints = points - benefit.cost
+      const code = generateCode()
+
+      const { error: updErr } = await supabase
+        .from('profiles')
+        .update({ points: newPoints })
+        .eq('id', user.id)
+      if (updErr) throw updErr
+
+      const { error: redErr } = await supabase
+        .from('redemptions')
+        .insert({
+          user_id: user.id,
+          prize_name: benefit.title,
+          points_spent: benefit.cost,
+          code,
+        })
+      if (redErr) throw redErr
+
+      await supabase.from('transactions').insert({
+        user_id: user.id,
+        description: `Canje: ${benefit.title} (${code})`,
+        amount: 0,
+        points_change: -benefit.cost,
+      })
+
+      setPoints(newPoints)
+      setMsg(`¡Canjeado! Tu código: ${code}`)
+      window.alert(`¡Canjeado! Tu código: ${code}\n\nGuárdalo o muéstralo en la tienda. Vence en 30 días.`)
+    } catch (err) {
+      window.alert('Error al canjear. Intenta de nuevo.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const currentLevel = getLevel(points)
@@ -84,10 +125,8 @@ export default function Benefits() {
         <p style={C.title}>Premios del universo 🏆</p>
         <p style={C.sub}>Tienes <span style={C.pts}>{points.toLocaleString()} ⭐</span> disponibles</p>
       </div>
-
       <div style={C.body}>
         {msg && <div style={{ background:'rgba(170,235,58,0.15)', border:'1px solid #AAEB3A', borderRadius:12, padding:12, marginBottom:12, fontSize:13, color:'#AAEB3A', fontWeight:700 }}>{msg}</div>}
-
         <p style={C.sectionTitle}>DISPONIBLES PARA TI</p>
         {BENEFITS.map((b, i) => {
           const canClaim = points >= b.cost
@@ -103,14 +142,13 @@ export default function Benefits() {
               <div style={C.benefitRight}>
                 <p style={canClaim ? C.benefitCost : C.benefitCostDim}>{b.cost} ⭐</p>
                 {canClaim
-                  ? <button style={C.btnClaim} onClick={() => handleClaim(b)}>Canjear</button>
+                  ? <button style={C.btnClaim} onClick={() => handleClaim(b)} disabled={busy}>{busy ? '...' : 'Canjear'}</button>
                   : <button style={C.btnLocked}>Faltan {b.cost - points} ⭐</button>
                 }
               </div>
             </div>
           )
         })}
-
         <div style={C.levelSection}>
           <p style={C.sectionTitle}>NIVELES DE LA GALAXIA</p>
           {LEVELS.map((l, i) => {
