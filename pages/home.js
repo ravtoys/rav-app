@@ -118,14 +118,14 @@ export default function Home() {
             <p style={C.gridTitle}>Historial</p>
             <p style={C.gridSub}>Mis misiones</p>
           </div>
+          <div style={C.gridCard} onClick={() => window.open('https://ravtoys.com', '_blank', 'noopener,noreferrer')}>
+            <div style={C.gridIcon}>🛸</div>
+            <p style={C.gridTitle}>Tienda</p>
+            <p style={C.gridSub}>Visitar ravtoys.com</p>
+          </div>
           <div style={C.gridCardDim}>
             <div style={C.gridIcon}>✨</div>
             <p style={C.gridTitle}>Wishlist</p>
-            <p style={C.gridSubDim}>Próximamente</p>
-          </div>
-          <div style={C.gridCardDim}>
-            <div style={C.gridIcon}>🛸</div>
-            <p style={C.gridTitle}>Tienda</p>
             <p style={C.gridSubDim}>Próximamente</p>
           </div>
         </div>
