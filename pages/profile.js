@@ -6,8 +6,9 @@ import Navbar from '../components/Navbar'
 const C = {
   page: { minHeight:'100vh', background:'#080618', paddingBottom:80 },
   header: { background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', padding:'20px 20px 24px', display:'flex', flexDirection:'column', alignItems:'center' },
-  avatar: { width:90, height:90, borderRadius:'50%', background:'#AAEB3A', border:'3px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, fontWeight:900, color:'#080618', marginBottom:10, overflow:'hidden' },
+  avatar: { width:90, height:90, borderRadius:'50%', background:'#AAEB3A', border:'3px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, fontWeight:900, color:'#080618', marginBottom:10, overflow:'hidden', cursor:'pointer', position:'relative' },
   avatarImg: { width:'100%', height:'100%', objectFit:'cover' },
+  cameraBadge: { position:'absolute', bottom:0, right:0, width:28, height:28, borderRadius:'50%', background:'#080618', border:'2px solid #AAEB3A', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13 },
   name: { fontFamily:"'Exo 2',sans-serif", fontSize:17, fontWeight:900, color:'white' },
   email: { fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:3 },
   badge: { fontSize:11, fontWeight:800, padding:'4px 12px', borderRadius:20, background:'rgba(170,235,58,0.15)', color:'#AAEB3A', border:'1px solid rgba(170,235,58,0.4)', marginTop:10 },
@@ -54,10 +55,11 @@ export default function Profile() {
   return (
     <div style={C.page}>
       <div style={C.header}>
-        <div style={C.avatar}>
+        <div style={C.avatar} onClick={() => router.push('/edit-profile')}>
           {profile.avatar_url
             ? <img src={profile.avatar_url} alt="avatar" style={C.avatarImg} />
             : initials}
+          <div style={C.cameraBadge}>📷</div>
         </div>
         <p style={C.name}>{profile.full_name || 'RAV Explorer'}</p>
         <p style={C.email}>{profile.email}</p>
