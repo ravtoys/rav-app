@@ -30,8 +30,8 @@ const C = {
   levelNameActive: { fontSize:12, fontWeight:800, color:'#AAEB3A' },
   levelRange: { fontSize:10, color:'rgba(255,255,255,0.3)' },
   levelRangeActive: { fontSize:10, color:'#AAEB3A', fontWeight:700 },
-  overlay: { position:'fixed', inset:0, background:'rgba(8,6,24,0.85)', backdropFilter:'blur(6px)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:100, animation:'fadeIn 0.2s ease' },
-  sheet: { width:'100%', maxWidth:480, background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', borderTop:'2px solid #AAEB3A', borderTopLeftRadius:24, borderTopRightRadius:24, padding:'28px 22px 32px', animation:'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', position:'relative' },
+  overlay: { position:'fixed', inset:0, background:'rgba(8,6,24,0.85)', backdropFilter:'blur(6px)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:9999, animation:'fadeIn 0.2s ease' },
+  sheet: { width:'100%', maxWidth:480, background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', borderTop:'2px solid #AAEB3A', borderTopLeftRadius:24, borderTopRightRadius:24, padding:'28px 22px 110px', animation:'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', position:'relative' },
   sheetClose: { position:'absolute', top:14, right:18, background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:22, cursor:'pointer', padding:0, lineHeight:1 },
   sheetIcon: { width:64, height:64, borderRadius:18, background:'rgba(170,235,58,0.15)', border:'1.5px solid #AAEB3A', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 14px' },
   sheetTitle: { fontFamily:"'Exo 2',sans-serif", fontSize:20, fontWeight:900, color:'white', textAlign:'center', marginBottom:6 },
@@ -41,7 +41,7 @@ const C = {
   btnPrimary: { width:'100%', padding:'15px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:15, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginBottom:10 },
   btnGhost: { width:'100%', padding:'13px', borderRadius:14, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   codeBox: { background:'rgba(170,235,58,0.1)', border:'2px dashed #AAEB3A', borderRadius:16, padding:'18px 12px', textAlign:'center', marginBottom:14, cursor:'pointer', position:'relative' },
-  codeText: { fontFamily:"'Exo 2',sans-serif", fontSize:24, fontWeight:900, color:'#AAEB3A', letterSpacing:2, marginBottom:4 },
+  codeText: { fontFamily:"'Exo 2',sans-serif", fontSize:30, fontWeight:900, color:'#AAEB3A', letterSpacing:3, marginBottom:4 },
   codeHint: { fontSize:10, color:'rgba(170,235,58,0.6)', fontWeight:700 },
   expiryNote: { fontSize:11, color:'rgba(255,255,255,0.5)', textAlign:'center', marginBottom:18, lineHeight:1.5 },
   copiedToast: { position:'absolute', top:8, right:8, background:'#AAEB3A', color:'#080618', fontSize:9, fontWeight:900, padding:'3px 7px', borderRadius:6 },
@@ -60,9 +60,9 @@ const LEVELS = [
 ]
 
 const generateCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789'
   const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return `RAV-${part()}-${part()}`
+  return `RAV-${part()}`
 }
 
 export default function Benefits() {
