@@ -17,13 +17,24 @@ export default async function handler(req, res) {
 
   try {
     const supabase = getSupabaseAdmin()
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone, avatar_url, points, level, created_at')
       .order('created_at', { ascending: false })
 
-    if (error) throw error
-    return res.status(200).json({ users: data || [] })
+    if (profilesError) throw profilesError
+
+    const { data: authData, error: usersError } = await supabase.auth.admin.listUsers()
+    if (usersError) throw usersError
+
+    const emailById = new Map((authData?.users || []).map((user) => [user.id, user.email]))
+    const users = (profiles || []).map((profile) => ({
+      ...profile,
+      email: emailById.get(profile.id) || '',
+    }))
+
+    return res.status(200).json({ users })
   } catch (error) {
     return res.status(500).json({ error: 'Could not load users' })
   }
