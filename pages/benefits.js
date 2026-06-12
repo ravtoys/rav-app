@@ -59,12 +59,6 @@ const LEVELS = [
   { icon:'🏆', name:'Leyenda', range:'2,000+ ⭐', min:2000 },
 ]
 
-const generateCode = () => {
-  const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789'
-  const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return `RAV-${part()}`
-}
-
 export default function Benefits() {
   const [points, setPoints] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -103,35 +97,23 @@ export default function Benefits() {
     const benefit = modalState.benefit
     setBusy(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const newPoints = points - benefit.cost
-      const code = generateCode()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/'); return }
 
-      const { error: updErr } = await supabase
-        .from('profiles')
-        .update({ points: newPoints })
-        .eq('id', user.id)
-      if (updErr) throw updErr
-
-      const { error: redErr } = await supabase
-        .from('redemptions')
-        .insert({
-          user_id: user.id,
-          prize_name: benefit.title,
-          points_spent: benefit.cost,
-          code,
-        })
-      if (redErr) throw redErr
-
-      await supabase.from('transactions').insert({
-        user_id: user.id,
-        description: `Canje: ${benefit.title} (${code})`,
-        amount: 0,
-        points_change: -benefit.cost,
+      const res = await fetch('/api/redeem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ prizeName: benefit.title }),
       })
 
-      setPoints(newPoints)
-      setModalState({ mode: 'success', benefit, code })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al canjear')
+
+      setPoints(data.points)
+      setModalState({ mode: 'success', benefit, code: data.code })
     } catch (err) {
       window.alert('Error al canjear. Intenta de nuevo.')
     } finally {
