@@ -1,8 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
-import { supabase } from '../lib/supabase'
-
-const ADMIN_PASSWORD = 'ravtoys2024'
 
 const C = {
   page: { minHeight:'100vh', background:'#080618', padding:'24px 20px 40px', fontFamily:"'Nunito',sans-serif" },
@@ -54,6 +50,8 @@ export default function Admin() {
   const [pointsInputs, setPointsInputs] = useState({})
   const [descInputs, setDescInputs] = useState({})
 
+  const getSavedPassword = () => localStorage.getItem('rav_admin_password') || ''
+
   useEffect(() => {
     const saved = localStorage.getItem('rav_admin')
     if (saved === 'true') setAuthed(true)
@@ -65,16 +63,36 @@ export default function Admin() {
 
   const loadUsers = async () => {
     setLoading(true)
-    const { data } = await supabase.from('admin_users').select('*').order('created_at', { ascending: false })
-    setUsers(data || [])
+    const res = await fetch('/api/admin/users', {
+      headers: { 'x-rav-admin-password': getSavedPassword() },
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      localStorage.removeItem('rav_admin')
+      localStorage.removeItem('rav_admin_password')
+      setAuthed(false)
+      setPwError('Sesión admin expirada')
+      setUsers([])
+    } else {
+      setUsers(data.users || [])
+    }
     setLoading(false)
   }
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
+  const handleLogin = async () => {
+    setLoading(true)
+    const res = await fetch('/api/admin/users', {
+      headers: { 'x-rav-admin-password': password },
+    })
+    const data = await res.json()
+    setLoading(false)
+
+    if (res.ok) {
       localStorage.setItem('rav_admin', 'true')
+      localStorage.setItem('rav_admin_password', password)
       setAuthed(true)
       setPwError('')
+      setUsers(data.users || [])
     } else {
       setPwError('Contraseña incorrecta')
     }
@@ -82,6 +100,7 @@ export default function Admin() {
 
   const handleLogout = () => {
     localStorage.removeItem('rav_admin')
+    localStorage.removeItem('rav_admin_password')
     setAuthed(false)
   }
 
@@ -90,12 +109,25 @@ export default function Admin() {
     const desc = descInputs[user.id] || (type === 'add' ? 'Puntos agregados por admin' : 'Puntos deducidos por admin')
     if (!pts || pts <= 0) return
 
-    const change = type === 'add' ? pts : -pts
-    const newPoints = Math.max(0, (user.points || 0) + change)
-    const newLevel = newPoints >= 2000 ? 'Leyenda' : newPoints >= 500 ? 'Aventurero' : 'Explorador'
+    const res = await fetch('/api/admin/points', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-rav-admin-password': getSavedPassword(),
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        points: pts,
+        type,
+        description: desc,
+      }),
+    })
 
-    await supabase.from('profiles').update({ points: newPoints, level: newLevel }).eq('id', user.id)
-    await supabase.from('transactions').insert({ user_id: user.id, description: desc, amount: 0, points_change: change })
+    if (!res.ok) {
+      setMsg('No se pudo actualizar. Vuelve a iniciar sesión.')
+      setTimeout(() => setMsg(''), 4000)
+      return
+    }
 
     setMsg(`✅ ${type === 'add' ? '+' : '-'}${pts} estrellas a ${user.full_name || user.id}`)
     setTimeout(() => setMsg(''), 4000)
