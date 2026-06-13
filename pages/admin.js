@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react'
 
+const PASSPORT_STAMPS = [
+  { id:'birthday', name:'Cumple RAV' },
+  { id:'jungle', name:'Visitó la Selva' },
+  { id:'dino-hunter', name:'Cazador de Dinosaurios' },
+  { id:'pilot', name:'Piloto RAV' },
+  { id:'scientist', name:'Peque Científico' },
+  { id:'artist', name:'Artista Galáctico' },
+  { id:'builder', name:'Constructor Estelar' },
+  { id:'mission', name:'Misión Cumplida' },
+  { id:'legend', name:'Leyenda en Formación' },
+]
+
 const C = {
   page: { minHeight:'100vh', background:'#080618', padding:'24px 20px 40px', fontFamily:"'Nunito',sans-serif" },
   login: { minHeight:'100vh', background:'#080618', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px', fontFamily:"'Nunito',sans-serif" },
@@ -39,6 +51,13 @@ const C = {
   consentLine: { fontSize:10, color:'rgba(255,255,255,0.42)', marginTop:6 },
   consentOk: { color:'#AAEB3A', fontWeight:900 },
   consentMissing: { color:'#ff6666', fontWeight:900 },
+  passportPanel: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.16)', borderRadius:10, padding:10, marginTop:10 },
+  passportMini: { display:'flex', flexWrap:'wrap', gap:8, marginTop:6 },
+  passportChip: { padding:'4px 7px', borderRadius:10, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.62)', fontSize:10, fontWeight:800 },
+  stampForm: { display:'grid', gridTemplateColumns:'1.3fr 70px 1.5fr auto', gap:8, marginTop:10 },
+  stampSelect: { minWidth:120, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
+  stampInput: { minWidth:0, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
+  stampBtn: { padding:'9px 11px', borderRadius:10, border:'none', background:'#AAEB3A', color:'#080618', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
   err: { color:'#ff6666', fontSize:12, marginTop:4 },
   empty: { textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:14, marginTop:40 },
   sectionTitle: { fontSize:11, fontWeight:800, color:'rgba(255,255,255,0.35)', letterSpacing:1, marginBottom:12 },
@@ -99,6 +118,9 @@ export default function Admin() {
   const [msg, setMsg] = useState('')
   const [pointsInputs, setPointsInputs] = useState({})
   const [descInputs, setDescInputs] = useState({})
+  const [stampInputs, setStampInputs] = useState({})
+  const [stampPoints, setStampPoints] = useState({})
+  const [stampNotes, setStampNotes] = useState({})
 
   const getSavedPassword = () => localStorage.getItem('rav_admin_password') || ''
 
@@ -186,6 +208,41 @@ export default function Admin() {
     loadUsers()
   }
 
+  const handlePassportStamp = async (user, child) => {
+    const stampKey = stampInputs[child.id] || 'mission'
+    const points = stampPoints[child.id] ?? '25'
+    const notes = stampNotes[child.id] || ''
+
+    const res = await fetch('/api/admin/passport-stamps', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-rav-admin-password': getSavedPassword(),
+      },
+      body: JSON.stringify({
+        parentId: user.id,
+        childId: child.id,
+        stampKey,
+        points,
+        notes,
+      }),
+    })
+
+    if (!res.ok) {
+      setMsg('No se pudo agregar el sello. Vuelve a iniciar sesión.')
+      setTimeout(() => setMsg(''), 4000)
+      return
+    }
+
+    const stampName = PASSPORT_STAMPS.find(stamp => stamp.id === stampKey)?.name || 'Misión RAV'
+    setMsg(`✅ Sello agregado a ${child.nickname}: ${stampName}`)
+    setTimeout(() => setMsg(''), 4000)
+    setStampInputs(prev => ({ ...prev, [child.id]: 'mission' }))
+    setStampPoints(prev => ({ ...prev, [child.id]: '25' }))
+    setStampNotes(prev => ({ ...prev, [child.id]: '' }))
+    loadUsers()
+  }
+
   const filtered = users.filter(u =>
     (u.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -201,6 +258,17 @@ export default function Admin() {
   const totalPoints = users.reduce((sum, u) => sum + (u.points || 0), 0)
   const legends = users.filter(u => (u.points || 0) >= 2000).length
   const totalKids = users.reduce((sum, u) => sum + (u.children?.length || 0), 0)
+  const allChildren = users.flatMap(u => u.children || [])
+  const passportEvents = allChildren.flatMap(child => child.passport_stamps || [])
+  const totalPassportStamps = totalKids + passportEvents.length
+  const activePassportKids = allChildren.filter(child => (child.passport_stamps || []).length > 0).length
+  const passportPoints = passportEvents.reduce((sum, stamp) => sum + (stamp.points_awarded || 0), 0)
+  const recentPassportVisits = passportEvents.filter(stamp => {
+    const created = new Date(stamp.created_at)
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 30)
+    return created >= cutoff
+  }).length
   const birthdaySoon = users.reduce((sum, u) => {
     return sum + (u.children || []).filter(child => {
       const countdown = getBirthdayCountdown(child.birth_date)
@@ -257,6 +325,26 @@ export default function Admin() {
         <div style={C.statCard}>
           <p style={C.statNum}>{birthdaySoon}</p>
           <p style={C.statLabel}>CUMPLES 30 DÍAS</p>
+        </div>
+      </div>
+
+      <p style={C.sectionTitle}>PASAPORTE RAV</p>
+      <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(4,1fr)' }}>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{totalPassportStamps}</p>
+          <p style={C.statLabel}>SELLOS TOTALES</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{recentPassportVisits}</p>
+          <p style={C.statLabel}>VISITAS 30 DÍAS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{activePassportKids}</p>
+          <p style={C.statLabel}>PEQUES ACTIVOS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{passportPoints}</p>
+          <p style={C.statLabel}>ESTRELLAS POR JUEGO</p>
         </div>
       </div>
 
@@ -321,6 +409,53 @@ export default function Admin() {
                         {child.interests.map(interest => <span key={interest} style={C.interestPill}>{interest}</span>)}
                       </div>
                     )}
+                    <div style={C.passportPanel}>
+                      <p style={C.kidsTitle}>PASAPORTE RAV</p>
+                      <p style={C.kidMeta}>
+                        Sellos: {1 + new Set((child.passport_stamps || []).map(stamp => stamp.stamp_key)).size} · Eventos: {(child.passport_stamps || []).length}
+                      </p>
+                      <p style={C.kidMeta}>
+                        Última actividad: {(child.passport_stamps || [])[0]
+                          ? formatConsentDate(child.passport_stamps[0].created_at)
+                          : 'Primer Viaje RAV'}
+                      </p>
+                      {!!child.passport_stamps?.length && (
+                        <div style={C.passportMini}>
+                          {child.passport_stamps.slice(0, 3).map(stamp => (
+                            <span key={stamp.id} style={C.passportChip}>
+                              {stamp.stamp_name} · +{stamp.points_awarded || 0}⭐
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div style={C.stampForm}>
+                        <select
+                          style={C.stampSelect}
+                          value={stampInputs[child.id] || 'mission'}
+                          onChange={e => setStampInputs(prev => ({ ...prev, [child.id]: e.target.value }))}
+                        >
+                          {PASSPORT_STAMPS.map(stamp => (
+                            <option key={stamp.id} value={stamp.id}>{stamp.name}</option>
+                          ))}
+                        </select>
+                        <input
+                          style={C.stampInput}
+                          type="number"
+                          placeholder="⭐"
+                          value={stampPoints[child.id] ?? '25'}
+                          onChange={e => setStampPoints(prev => ({ ...prev, [child.id]: e.target.value }))}
+                        />
+                        <input
+                          style={C.stampInput}
+                          placeholder="Nota: juego, portal, visita..."
+                          value={stampNotes[child.id] || ''}
+                          onChange={e => setStampNotes(prev => ({ ...prev, [child.id]: e.target.value }))}
+                        />
+                        <button style={C.stampBtn} onClick={() => handlePassportStamp(user, child)}>
+                          + Sello
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <p style={C.kidCountdown}>{getBirthdayCountdown(child.birth_date)}</p>
                 </div>
