@@ -79,6 +79,14 @@ export default function Profile() {
             <span style={C.menuText}>Mi teléfono</span>
             <span style={C.menuArrow}>{profile.phone || 'No registrado'}</span>
           </div>
+          <div style={C.menuItem}>
+            <span style={C.menuText}>Ciudad</span>
+            <span style={C.menuArrow}>{profile.city || 'No registrada'}</span>
+          </div>
+          <div style={C.menuItem}>
+            <span style={C.menuText}>País</span>
+            <span style={C.menuArrow}>{profile.country || 'No registrado'}</span>
+          </div>
           <div style={C.menuItemLast}>
             <span style={C.menuText}>Notificaciones</span>
             <span style={C.menuArrow}>›</span>
