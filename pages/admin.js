@@ -66,6 +66,10 @@ const C = {
   insightName: { color:'white', fontSize:12, fontWeight:800 },
   insightMeta: { color:'rgba(255,255,255,0.45)', fontSize:10, marginTop:2 },
   insightValue: { color:'#AAEB3A', fontSize:12, fontWeight:900, textAlign:'right', whiteSpace:'nowrap' },
+  messageActions: { display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end', marginTop:6 },
+  whatsappBtn: { padding:'7px 9px', borderRadius:10, border:'none', background:'#AAEB3A', color:'#080618', fontSize:10, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  copyBtn: { padding:'7px 9px', borderRadius:10, border:'1px solid rgba(170,235,58,0.28)', background:'transparent', color:'#AAEB3A', fontSize:10, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  warningPill: { display:'inline-block', padding:'4px 7px', borderRadius:10, background:'rgba(255,102,102,0.1)', border:'1px solid rgba(255,102,102,0.2)', color:'#ff6666', fontSize:10, fontWeight:900, marginTop:5 },
   err: { color:'#ff6666', fontSize:12, marginTop:4 },
   empty: { textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:14, marginTop:40 },
   sectionTitle: { fontSize:11, fontWeight:800, color:'rgba(255,255,255,0.35)', letterSpacing:1, marginBottom:12 },
@@ -125,6 +129,27 @@ function getAvatarIcon(id) {
 function formatConsentDate(date) {
   if (!date) return ''
   return new Date(date).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' })
+}
+
+function getWhatsAppPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.length === 10 && digits.startsWith('3')) return `57${digits}`
+  return digits
+}
+
+function getFirstName(name) {
+  return (name || '').trim().split(' ')[0] || 'Hola'
+}
+
+function buildBirthdayMessage(user, child) {
+  const parentName = getFirstName(user.full_name)
+  return `Hola ${parentName}, en RAV Club tenemos presente el cumple de ${child.nickname}. Queremos preparar una sorpresa especial para su próxima aventura en RAV Toys.`
+}
+
+function buildStarsMessage(user) {
+  const parentName = getFirstName(user.full_name)
+  return `Hola ${parentName}, tienes ${(user.points || 0).toLocaleString('es-CO')} Estrellas RAV en tu cuenta. Te esperamos para seguir sumando misiones y sorpresas en RAV Toys.`
 }
 
 export default function Admin() {
@@ -262,6 +287,26 @@ export default function Admin() {
     loadUsers()
   }
 
+  const openWhatsApp = (phone, message) => {
+    const whatsappPhone = getWhatsAppPhone(phone)
+    if (!whatsappPhone) {
+      setMsg('Este cliente no tiene teléfono listo para WhatsApp.')
+      setTimeout(() => setMsg(''), 4000)
+      return
+    }
+    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+  }
+
+  const copyMessage = async (message) => {
+    try {
+      await navigator.clipboard.writeText(message)
+      setMsg('Mensaje copiado.')
+    } catch (error) {
+      setMsg('No se pudo copiar el mensaje.')
+    }
+    setTimeout(() => setMsg(''), 3000)
+  }
+
   const filtered = users.filter(u =>
     (u.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -329,6 +374,21 @@ export default function Admin() {
     }).length },
     { label:'13+', count: allChildren.filter(child => calculateAge(child.birth_date) >= 13).length },
   ]
+  const marketingUsers = users.filter(user => user.marketing_consent)
+  const usersReadyForWhatsApp = marketingUsers.filter(user => getWhatsAppPhone(user.phone))
+  const usersMissingPhone = marketingUsers.filter(user => !getWhatsAppPhone(user.phone))
+  const usersMissingConsent = users.filter(user => !user.marketing_consent)
+  const birthdayMessages = users.flatMap(user =>
+    (user.children || []).map(child => ({
+      user,
+      child,
+      daysToBirthday: getDaysUntilBirthday(child.birth_date),
+    }))
+  )
+    .filter(item => item.daysToBirthday <= 30 && item.user.marketing_consent)
+    .sort((a, b) => a.daysToBirthday - b.daysToBirthday)
+    .slice(0, 6)
+  const generalMessages = usersReadyForWhatsApp.slice(0, 6)
 
   if (!authed) {
     return (
@@ -454,6 +514,78 @@ export default function Admin() {
               <p style={C.insightValue}>{group.count}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      <p style={C.sectionTitle}>CENTRO DE MENSAJES</p>
+      <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(3,1fr)' }}>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{usersReadyForWhatsApp.length}</p>
+          <p style={C.statLabel}>WHATSAPP LISTOS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{birthdayMessages.length}</p>
+          <p style={C.statLabel}>CUMPLES PARA ESCRIBIR</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{usersMissingPhone.length + usersMissingConsent.length}</p>
+          <p style={C.statLabel}>DATOS PENDIENTES</p>
+        </div>
+      </div>
+
+      <div style={C.insightGrid}>
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>CUMPLES PARA WHATSAPP</p>
+          {birthdayMessages.length === 0 && <p style={C.kidMeta}>No hay mensajes de cumpleaños listos.</p>}
+          {birthdayMessages.map(({ user, child, daysToBirthday }) => {
+            const message = buildBirthdayMessage(user, child)
+            return (
+              <div key={`${user.id}-${child.id}`} style={C.insightRow}>
+                <div>
+                  <p style={C.insightName}>{child.nickname} · {daysToBirthday === 0 ? 'Hoy' : `${daysToBirthday} días`}</p>
+                  <p style={C.insightMeta}>{user.full_name || 'Sin nombre'} · {user.phone || 'Sin teléfono'}</p>
+                  {!getWhatsAppPhone(user.phone) && <span style={C.warningPill}>Falta teléfono</span>}
+                </div>
+                <div style={C.messageActions}>
+                  <button style={C.whatsappBtn} onClick={() => openWhatsApp(user.phone, message)}>WhatsApp</button>
+                  <button style={C.copyBtn} onClick={() => copyMessage(message)}>Copiar</button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>MENSAJE GENERAL</p>
+          {generalMessages.length === 0 && <p style={C.kidMeta}>Aún no hay clientes con teléfono y consentimiento.</p>}
+          {generalMessages.map(user => {
+            const message = buildStarsMessage(user)
+            return (
+              <div key={user.id} style={C.insightRow}>
+                <div>
+                  <p style={C.insightName}>{user.full_name || 'Sin nombre'}</p>
+                  <p style={C.insightMeta}>{user.phone || 'Sin teléfono'} · {(user.points || 0).toLocaleString()}⭐</p>
+                </div>
+                <div style={C.messageActions}>
+                  <button style={C.whatsappBtn} onClick={() => openWhatsApp(user.phone, message)}>WhatsApp</button>
+                  <button style={C.copyBtn} onClick={() => copyMessage(message)}>Copiar</button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>FALTAN DATOS</p>
+          <div style={C.insightRow}>
+            <p style={C.insightName}>Sin teléfono</p>
+            <p style={C.insightValue}>{usersMissingPhone.length}</p>
+          </div>
+          <div style={C.insightRow}>
+            <p style={C.insightName}>Sin consentimiento</p>
+            <p style={C.insightValue}>{usersMissingConsent.length}</p>
+          </div>
+          <p style={{ ...C.kidMeta, marginTop:8 }}>Solo escribimos a clientes con permiso de marketing.</p>
         </div>
       </div>
 
