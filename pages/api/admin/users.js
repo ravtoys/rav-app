@@ -35,9 +35,23 @@ export default async function handler(req, res) {
 
     if (childProfilesError) throw childProfilesError
 
+    const { data: passportStamps, error: passportStampsError } = await supabase
+      .from('child_passport_stamps')
+      .select('id, child_id, parent_id, stamp_key, stamp_name, points_awarded, notes, created_at')
+      .order('created_at', { ascending: false })
+
+    if (passportStampsError) throw passportStampsError
+
     const emailById = new Map((authData?.users || []).map((user) => [user.id, user.email]))
+    const stampsByChildId = (passportStamps || []).reduce((map, stamp) => {
+      if (!map.has(stamp.child_id)) map.set(stamp.child_id, [])
+      map.get(stamp.child_id).push(stamp)
+      return map
+    }, new Map())
+
     const childrenByParentId = (childProfiles || []).reduce((map, child) => {
       if (!map.has(child.parent_id)) map.set(child.parent_id, [])
+      child.passport_stamps = stampsByChildId.get(child.id) || []
       map.get(child.parent_id).push(child)
       return map
     }, new Map())
