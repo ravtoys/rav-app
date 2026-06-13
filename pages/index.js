@@ -21,10 +21,15 @@ export default function Welcome() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('Colombia')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  const cleanPhone = phone.replace(/\s/g, '')
+  const isValidPhone = /^\+\d{8,15}$/.test(cleanPhone)
 
   const handleLogin = async () => {
     setLoading(true); setError('')
@@ -35,14 +40,25 @@ export default function Welcome() {
   }
 
   const handleSignup = async () => {
-    if (!name || !email || !password) { setError('Por favor completa todos los campos'); return }
+    if (!name || !email || !phone || !city || !country || !password) { setError('Por favor completa todos los campos'); return }
+    if (!isValidPhone) { setError('Escribe tu teléfono con indicativo. Ej: +57 3001234567'); return }
     setLoading(true); setError('')
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: name, phone } }
+      options: { data: { full_name: name, phone: cleanPhone, city, country } }
     })
-    if (error) setError(error.message)
-    else router.push('/home')
+    if (error) {
+      setError(error.message)
+    } else {
+      const userId = data?.user?.id
+      if (userId) {
+        await supabase
+          .from('profiles')
+          .update({ full_name: name, phone: cleanPhone, city, country })
+          .eq('id', userId)
+      }
+      router.push('/home')
+    }
     setLoading(false)
   }
 
@@ -112,7 +128,11 @@ export default function Welcome() {
         )}
         <input placeholder="Correo electrónico" type="email" value={email} onChange={e => setEmail(e.target.value)} />
         {mode === 'signup' && (
-          <input placeholder="Teléfono (opcional)" value={phone} onChange={e => setPhone(e.target.value)} />
+          <>
+            <input placeholder="Teléfono con indicativo. Ej: +57 3001234567" value={phone} onChange={e => setPhone(e.target.value)} />
+            <input placeholder="Ciudad" value={city} onChange={e => setCity(e.target.value)} />
+            <input placeholder="País" value={country} onChange={e => setCountry(e.target.value)} />
+          </>
         )}
         <input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} />
 
