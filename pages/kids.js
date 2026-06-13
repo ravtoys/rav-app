@@ -46,6 +46,8 @@ const C = {
   btn: { width:'100%', padding:'14px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:14, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   ghostBtn: { width:'100%', padding:'12px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginTop:8 },
   err: { color:'#ff6666', fontSize:12, marginBottom:10 },
+  consentRow: { display:'flex', gap:9, alignItems:'flex-start', color:'rgba(255,255,255,0.58)', fontSize:11, lineHeight:1.35, marginBottom:14 },
+  checkbox: { marginTop:2, accentColor:'#AAEB3A' },
   sectionTitle: { fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.35)', letterSpacing:1, margin:'2px 0 10px' },
   empty: { textAlign:'center', padding:'34px 18px', color:'rgba(255,255,255,0.42)', fontSize:13, lineHeight:1.45 },
   card: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.18)', borderRadius:14, padding:14, marginBottom:10 },
@@ -67,6 +69,8 @@ const blankForm = {
   interests: [],
   avatar: 'alien',
 }
+
+const KIDS_CONSENT_TEXT = 'Confirmo que soy madre, padre o acudiente del peque y autorizo a RAV Toys a usar esta información para beneficios, recomendaciones, sorpresas de cumpleaños y comunicaciones del RAV Club.'
 
 function getAvatarIcon(id) {
   return AVATARS.find((avatar) => avatar.id === id)?.icon || '👽'
@@ -103,6 +107,7 @@ export default function Kids() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [kidsConsent, setKidsConsent] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -138,6 +143,7 @@ export default function Kids() {
   const resetForm = () => {
     setForm(blankForm)
     setEditingId('')
+    setKidsConsent(false)
     setError('')
   }
 
@@ -164,8 +170,14 @@ export default function Kids() {
       return
     }
 
+    if (!editingId && !kidsConsent) {
+      setError('Debes confirmar que eres madre, padre o acudiente')
+      return
+    }
+
     setSaving(true)
     setError('')
+    const consentAt = new Date().toISOString()
 
     const payload = {
       parent_id: userId,
@@ -176,6 +188,11 @@ export default function Kids() {
       updated_at: new Date().toISOString(),
     }
 
+    if (!editingId) {
+      payload.consent_at = consentAt
+      payload.consent_text = KIDS_CONSENT_TEXT
+    }
+
     const result = editingId
       ? await supabase.from('child_profiles').update(payload).eq('id', editingId)
       : await supabase.from('child_profiles').insert(payload)
@@ -183,6 +200,16 @@ export default function Kids() {
     if (result.error) {
       setError('No se pudo guardar. Intenta de nuevo.')
     } else {
+      if (!editingId) {
+        await supabase
+          .from('profiles')
+          .update({
+            kids_data_consent: true,
+            kids_data_consent_at: consentAt,
+            kids_data_consent_text: KIDS_CONSENT_TEXT,
+          })
+          .eq('id', userId)
+      }
       resetForm()
       await loadKids()
     }
@@ -260,6 +287,18 @@ export default function Kids() {
               </button>
             ))}
           </div>
+
+          {!editingId && (
+            <label style={C.consentRow}>
+              <input
+                style={C.checkbox}
+                type="checkbox"
+                checked={kidsConsent}
+                onChange={e => setKidsConsent(e.target.checked)}
+              />
+              <span>{KIDS_CONSENT_TEXT}</span>
+            </label>
+          )}
 
           <button style={C.btn} onClick={saveKid} disabled={saving}>
             {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar peque'}
