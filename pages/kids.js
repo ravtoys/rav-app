@@ -26,6 +26,19 @@ const AVATARS = [
   { id:'helmet', icon:'🧑‍🚀', label:'Casco' },
 ]
 
+const PASSPORT_STAMPS = [
+  { id:'first-trip', name:'Primer Viaje RAV', icon:'🛸', unlocked:true },
+  { id:'birthday', name:'Cumple RAV', icon:'🎂' },
+  { id:'jungle', name:'Visitó la Selva', icon:'🌿' },
+  { id:'dino-hunter', name:'Cazador de Dinosaurios', icon:'🦖' },
+  { id:'pilot', name:'Piloto RAV', icon:'🚀' },
+  { id:'scientist', name:'Peque Científico', icon:'🔬' },
+  { id:'artist', name:'Artista Galáctico', icon:'🎨' },
+  { id:'builder', name:'Constructor Estelar', icon:'🧱' },
+  { id:'mission', name:'Misión Cumplida', icon:'⭐' },
+  { id:'legend', name:'Leyenda en Formación', icon:'🏆' },
+]
+
 const C = {
   page: { minHeight:'100vh', background:'#080618', paddingBottom:92 },
   header: { background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', padding:'22px 20px 18px' },
@@ -60,7 +73,29 @@ const C = {
   cardBtns: { display:'flex', gap:8, marginTop:12 },
   smallBtn: { flex:1, padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'transparent', color:'#AAEB3A', fontSize:12, fontWeight:900, cursor:'pointer' },
   deleteBtn: { flex:1, padding:'10px', borderRadius:12, border:'1px solid rgba(255,100,100,0.25)', background:'rgba(200,30,30,0.08)', color:'#ff6666', fontSize:12, fontWeight:900, cursor:'pointer' },
+  passportBtn: { width:'100%', padding:'12px', borderRadius:14, border:'1px solid rgba(170,235,58,0.55)', background:'linear-gradient(135deg,rgba(170,235,58,0.22),rgba(43,63,191,0.26))', color:'#AAEB3A', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginTop:10 },
   disabledBtn: { width:'100%', padding:'10px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.32)', fontSize:11, fontWeight:900, marginTop:10 },
+  overlay: { position:'fixed', inset:0, zIndex:20, background:'rgba(8,6,24,0.92)', padding:'16px', overflowY:'auto' },
+  passport: { maxWidth:520, margin:'0 auto 92px', background:'linear-gradient(180deg,rgba(26,10,61,0.98),rgba(13,11,43,0.98))', border:'1px solid rgba(170,235,58,0.28)', borderRadius:18, padding:16, boxShadow:'0 18px 50px rgba(0,0,0,0.4)' },
+  passportTop: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:14 },
+  passportTitle: { fontFamily:"'Exo 2',sans-serif", fontSize:23, fontWeight:900, color:'#AAEB3A', lineHeight:1.1 },
+  passportSub: { color:'rgba(255,255,255,0.58)', fontSize:12, lineHeight:1.45, marginTop:8 },
+  closeBtn: { width:36, height:36, borderRadius:18, border:'1px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.06)', color:'white', fontSize:18, cursor:'pointer', flexShrink:0 },
+  passportHero: { display:'flex', alignItems:'center', gap:12, background:'rgba(170,235,58,0.08)', border:'1px solid rgba(170,235,58,0.2)', borderRadius:16, padding:12, marginBottom:14 },
+  passportAvatar: { width:62, height:62, borderRadius:20, background:'rgba(170,235,58,0.16)', border:'1px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, flexShrink:0 },
+  passportName: { color:'white', fontSize:18, fontWeight:900 },
+  passportMeta: { color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:4 },
+  stampStats: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 },
+  miniStat: { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:12 },
+  miniStatNum: { fontFamily:"'Exo 2',sans-serif", fontSize:22, fontWeight:900, color:'#AAEB3A' },
+  miniStatLabel: { fontSize:10, color:'rgba(255,255,255,0.42)', fontWeight:900, marginTop:2 },
+  stampGrid: { display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 },
+  stamp: { minHeight:94, borderRadius:16, border:'1px dashed rgba(170,235,58,0.48)', background:'rgba(170,235,58,0.1)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:10, textAlign:'center' },
+  stampLocked: { minHeight:94, borderRadius:16, border:'1px dashed rgba(255,255,255,0.14)', background:'rgba(255,255,255,0.035)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:10, textAlign:'center', filter:'grayscale(0.5)' },
+  stampIcon: { fontSize:26, marginBottom:6 },
+  stampName: { color:'white', fontSize:12, fontWeight:900, lineHeight:1.15 },
+  stampState: { color:'rgba(170,235,58,0.75)', fontSize:9, fontWeight:900, letterSpacing:1, marginTop:6 },
+  stampStateLocked: { color:'rgba(255,255,255,0.32)', fontSize:9, fontWeight:900, letterSpacing:1, marginTop:6 },
 }
 
 const blankForm = {
@@ -108,6 +143,7 @@ export default function Kids() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [kidsConsent, setKidsConsent] = useState(false)
+  const [selectedPassport, setSelectedPassport] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -337,6 +373,9 @@ export default function Kids() {
               </div>
             )}
 
+            <button style={C.passportBtn} onClick={() => setSelectedPassport(kid)}>
+              Ver Pasaporte
+            </button>
             <button style={C.disabledBtn} disabled>Wishlist próximamente</button>
             <div style={C.cardBtns}>
               <button style={C.smallBtn} onClick={() => startEdit(kid)}>Editar</button>
@@ -345,6 +384,60 @@ export default function Kids() {
           </div>
         ))}
       </div>
+
+      {selectedPassport && (
+        <div style={C.overlay}>
+          <div style={C.passport}>
+            <div style={C.passportTop}>
+              <div>
+                <p style={C.passportTitle}>Pasaporte de {selectedPassport.nickname}</p>
+                <p style={C.passportSub}>Cada aventura, cumpleaños y sorpresa queda guardada en su universo RAV.</p>
+              </div>
+              <button style={C.closeBtn} onClick={() => setSelectedPassport(null)}>×</button>
+            </div>
+
+            <p style={C.sectionTitle}>PERFIL DEL PEQUE</p>
+            <div style={C.passportHero}>
+              <div style={C.passportAvatar}>{getAvatarIcon(selectedPassport.avatar)}</div>
+              <div style={{ minWidth:0 }}>
+                <p style={C.passportName}>{selectedPassport.nickname}</p>
+                <p style={C.passportMeta}>{calculateAge(selectedPassport.birth_date)} años</p>
+                <p style={C.passportMeta}>{getBirthdayCountdown(selectedPassport.birth_date)}</p>
+              </div>
+            </div>
+
+            {!!selectedPassport.interests?.length && (
+              <div style={C.pills}>
+                {selectedPassport.interests.map(interest => <span key={interest} style={C.pillActive}>{interest}</span>)}
+              </div>
+            )}
+
+            <div style={C.stampStats}>
+              <div style={C.miniStat}>
+                <p style={C.miniStatNum}>1</p>
+                <p style={C.miniStatLabel}>SELLO GANADO</p>
+              </div>
+              <div style={C.miniStat}>
+                <p style={C.miniStatNum}>{PASSPORT_STAMPS.length}</p>
+                <p style={C.miniStatLabel}>MISIONES RAV</p>
+              </div>
+            </div>
+
+            <p style={C.sectionTitle}>SELLOS</p>
+            <div style={C.stampGrid}>
+              {PASSPORT_STAMPS.map(stamp => (
+                <div key={stamp.id} style={stamp.unlocked ? C.stamp : C.stampLocked}>
+                  <p style={C.stampIcon}>{stamp.icon}</p>
+                  <p style={C.stampName}>{stamp.name}</p>
+                  <p style={stamp.unlocked ? C.stampState : C.stampStateLocked}>
+                    {stamp.unlocked ? 'DESBLOQUEADO' : 'POR GANAR'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Navbar active="kids" />
     </div>
