@@ -13,8 +13,10 @@ const C = {
   btnOut: { padding:'14px', borderRadius:14, border:'1.5px solid rgba(170,235,58,0.4)', background:'transparent', color:'#AAEB3A', fontSize:15, fontWeight:700, width:'100%' },
   toggle: { textAlign:'center', color:'rgba(255,255,255,0.5)', fontSize:13, marginTop:4, cursor:'pointer' },
   err: { color:'#ff6666', fontSize:13, textAlign:'center' },
-  consentRow: { display:'flex', gap:9, alignItems:'flex-start', color:'rgba(255,255,255,0.58)', fontSize:11, lineHeight:1.35 },
-  checkbox: { marginTop:2, accentColor:'#AAEB3A' },
+  consentBox: { display:'flex', gap:12, alignItems:'flex-start', padding:'12px', borderRadius:14, border:'1.5px solid rgba(170,235,58,0.55)', background:'rgba(170,235,58,0.08)', cursor:'pointer' },
+  checkbox: { width:22, height:22, marginTop:1, accentColor:'#AAEB3A', flexShrink:0, cursor:'pointer' },
+  consentTitle: { color:'#AAEB3A', fontSize:13, fontWeight:900, marginBottom:4 },
+  consentText: { color:'rgba(255,255,255,0.72)', fontSize:11, lineHeight:1.35 },
   foot: { color:'rgba(255,255,255,0.2)', fontSize:11, textAlign:'center', marginTop:16 },
 }
 
@@ -157,14 +159,17 @@ export default function Welcome() {
             <input placeholder="Teléfono con indicativo. Ej: +57 3001234567" value={phone} onChange={e => setPhone(e.target.value)} />
             <input placeholder="Ciudad" value={city} onChange={e => setCity(e.target.value)} />
             <input placeholder="País" value={country} onChange={e => setCountry(e.target.value)} />
-            <label style={C.consentRow}>
+            <label style={C.consentBox}>
               <input
                 style={C.checkbox}
                 type="checkbox"
                 checked={consent}
                 onChange={e => setConsent(e.target.checked)}
               />
-              <span>{GENERAL_CONSENT_TEXT}</span>
+              <span>
+                <span style={C.consentTitle}>Sí, acepto y autorizo el uso de mis datos</span>
+                <span style={C.consentText}>{GENERAL_CONSENT_TEXT}</span>
+              </span>
             </label>
           </>
         )}
