@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, city, country, avatar_url, points, level, created_at')
+      .select('id, full_name, phone, city, country, avatar_url, points, level, marketing_consent, marketing_consent_at, kids_data_consent, kids_data_consent_at, created_at')
       .order('created_at', { ascending: false })
 
     if (profilesError) throw profilesError
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     const { data: childProfiles, error: childProfilesError } = await supabase
       .from('child_profiles')
-      .select('id, parent_id, nickname, birth_date, interests, avatar, created_at')
+      .select('id, parent_id, nickname, birth_date, interests, avatar, consent_at, created_at')
       .order('birth_date', { ascending: true })
 
     if (childProfilesError) throw childProfilesError
