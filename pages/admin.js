@@ -39,6 +39,7 @@ const C = {
   statsRow: { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 },
   statCard: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'12px 14px' },
   statNum: { fontFamily:"'Exo 2',sans-serif", fontSize:24, fontWeight:900, color:'#AAEB3A' },
+  statWord: { fontFamily:"'Exo 2',sans-serif", fontSize:18, fontWeight:900, color:'#AAEB3A', lineHeight:1.1 },
   statLabel: { fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:2, fontWeight:700 },
   kidsBox: { background:'rgba(43,63,191,0.12)', border:'1px solid rgba(43,63,191,0.35)', borderRadius:12, padding:'10px 12px', margin:'10px 0 12px' },
   kidsTitle: { fontSize:10, fontWeight:900, color:'rgba(170,235,58,0.7)', letterSpacing:1, marginBottom:8 },
@@ -58,6 +59,13 @@ const C = {
   stampSelect: { minWidth:120, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
   stampInput: { minWidth:0, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
   stampBtn: { padding:'9px 11px', borderRadius:10, border:'none', background:'#AAEB3A', color:'#080618', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  insightGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))', gap:10, marginBottom:20 },
+  insightPanel: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'12px 14px' },
+  insightTitle: { fontSize:10, fontWeight:900, color:'rgba(170,235,58,0.7)', letterSpacing:1, marginBottom:10 },
+  insightRow: { display:'flex', justifyContent:'space-between', gap:10, padding:'7px 0', borderTop:'1px solid rgba(255,255,255,0.06)' },
+  insightName: { color:'white', fontSize:12, fontWeight:800 },
+  insightMeta: { color:'rgba(255,255,255,0.45)', fontSize:10, marginTop:2 },
+  insightValue: { color:'#AAEB3A', fontSize:12, fontWeight:900, textAlign:'right', whiteSpace:'nowrap' },
   err: { color:'#ff6666', fontSize:12, marginTop:4 },
   empty: { textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:14, marginTop:40 },
   sectionTitle: { fontSize:11, fontWeight:800, color:'rgba(255,255,255,0.35)', letterSpacing:1, marginBottom:12 },
@@ -90,6 +98,17 @@ function getBirthdayCountdown(date) {
   if (days === 0) return 'Cumple hoy'
   if (days === 1) return 'Cumple mañana'
   return `${days} días`
+}
+
+function getDaysUntilBirthday(date) {
+  const today = new Date()
+  const birth = new Date(`${date}T00:00:00`)
+  const next = new Date(today.getFullYear(), birth.getMonth(), birth.getDate())
+  next.setHours(0, 0, 0, 0)
+  const start = new Date(today)
+  start.setHours(0, 0, 0, 0)
+  if (next < start) next.setFullYear(today.getFullYear() + 1)
+  return Math.ceil((next - start) / (1000 * 60 * 60 * 24))
 }
 
 function getAvatarIcon(id) {
@@ -259,6 +278,7 @@ export default function Admin() {
   const legends = users.filter(u => (u.points || 0) >= 2000).length
   const totalKids = users.reduce((sum, u) => sum + (u.children?.length || 0), 0)
   const allChildren = users.flatMap(u => u.children || [])
+  const childrenWithParent = users.flatMap(u => (u.children || []).map(child => ({ ...child, parentName: u.full_name, parentPhone: u.phone })))
   const passportEvents = allChildren.flatMap(child => child.passport_stamps || [])
   const totalPassportStamps = totalKids + passportEvents.length
   const activePassportKids = allChildren.filter(child => (child.passport_stamps || []).length > 0).length
@@ -277,6 +297,38 @@ export default function Admin() {
       return !Number.isNaN(days) && days <= 30
     }).length
   }, 0)
+  const birthday7 = allChildren.filter(child => getDaysUntilBirthday(child.birth_date) <= 7).length
+  const missingInterests = allChildren.filter(child => !child.interests?.length).length
+  const averageAge = allChildren.length
+    ? Math.round(allChildren.reduce((sum, child) => sum + calculateAge(child.birth_date), 0) / allChildren.length)
+    : 0
+  const upcomingBirthdays = childrenWithParent
+    .map(child => ({ ...child, daysToBirthday: getDaysUntilBirthday(child.birth_date) }))
+    .filter(child => child.daysToBirthday <= 60)
+    .sort((a, b) => a.daysToBirthday - b.daysToBirthday)
+    .slice(0, 5)
+  const topInterests = Object.entries(allChildren.reduce((map, child) => {
+    ;(child.interests || []).forEach(interest => { map[interest] = (map[interest] || 0) + 1 })
+    return map
+  }, {}))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+  const ageGroups = [
+    { label:'0-2', count: allChildren.filter(child => calculateAge(child.birth_date) <= 2).length },
+    { label:'3-5', count: allChildren.filter(child => {
+      const age = calculateAge(child.birth_date)
+      return age >= 3 && age <= 5
+    }).length },
+    { label:'6-8', count: allChildren.filter(child => {
+      const age = calculateAge(child.birth_date)
+      return age >= 6 && age <= 8
+    }).length },
+    { label:'9-12', count: allChildren.filter(child => {
+      const age = calculateAge(child.birth_date)
+      return age >= 9 && age <= 12
+    }).length },
+    { label:'13+', count: allChildren.filter(child => calculateAge(child.birth_date) >= 13).length },
+  ]
 
   if (!authed) {
     return (
@@ -329,7 +381,7 @@ export default function Admin() {
       </div>
 
       <p style={C.sectionTitle}>PASAPORTE RAV</p>
-      <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(4,1fr)' }}>
+      <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))' }}>
         <div style={C.statCard}>
           <p style={C.statNum}>{totalPassportStamps}</p>
           <p style={C.statLabel}>SELLOS TOTALES</p>
@@ -345,6 +397,63 @@ export default function Admin() {
         <div style={C.statCard}>
           <p style={C.statNum}>{passportPoints}</p>
           <p style={C.statLabel}>ESTRELLAS POR JUEGO</p>
+        </div>
+      </div>
+
+      <p style={C.sectionTitle}>KIDS MARKETING KPIS</p>
+      <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(4,1fr)' }}>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{birthday7}</p>
+          <p style={C.statLabel}>CUMPLES 7 DÍAS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{averageAge}</p>
+          <p style={C.statLabel}>EDAD PROMEDIO</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statWord}>{topInterests[0]?.[0] || '-'}</p>
+          <p style={C.statLabel}>INTERÉS #1</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{missingInterests}</p>
+          <p style={C.statLabel}>SIN GUSTOS</p>
+        </div>
+      </div>
+
+      <div style={C.insightGrid}>
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>PRÓXIMOS CUMPLEAÑOS</p>
+          {upcomingBirthdays.length === 0 && <p style={C.kidMeta}>No hay cumpleaños en los próximos 60 días.</p>}
+          {upcomingBirthdays.map(child => (
+            <div key={child.id} style={C.insightRow}>
+              <div>
+                <p style={C.insightName}>{child.nickname}</p>
+                <p style={C.insightMeta}>{child.parentName || 'Sin acudiente'} · {child.parentPhone || 'Sin teléfono'}</p>
+              </div>
+              <p style={C.insightValue}>{child.daysToBirthday === 0 ? 'Hoy' : `${child.daysToBirthday} días`}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>GUSTOS MÁS FUERTES</p>
+          {topInterests.length === 0 && <p style={C.kidMeta}>Aún no hay intereses registrados.</p>}
+          {topInterests.map(([interest, count]) => (
+            <div key={interest} style={C.insightRow}>
+              <p style={C.insightName}>{interest}</p>
+              <p style={C.insightValue}>{count}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>EDADES</p>
+          {ageGroups.map(group => (
+            <div key={group.label} style={C.insightRow}>
+              <p style={C.insightName}>{group.label} años</p>
+              <p style={C.insightValue}>{group.count}</p>
+            </div>
+          ))}
         </div>
       </div>
 
