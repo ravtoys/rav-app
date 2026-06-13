@@ -27,7 +27,7 @@ const AVATARS = [
 ]
 
 const PASSPORT_STAMPS = [
-  { id:'first-trip', name:'Primer Viaje RAV', icon:'🛸', unlocked:true },
+  { id:'first-trip', name:'Primer Viaje RAV', icon:'🛸', automatic:true },
   { id:'birthday', name:'Cumple RAV', icon:'🎂' },
   { id:'jungle', name:'Visitó la Selva', icon:'🌿' },
   { id:'dino-hunter', name:'Cazador de Dinosaurios', icon:'🦖' },
@@ -159,7 +159,7 @@ export default function Kids() {
   const loadKids = async (parentId = userId) => {
     const { data, error } = await supabase
       .from('child_profiles')
-      .select('*')
+      .select('*, passport_stamps:child_passport_stamps(*)')
       .eq('parent_id', parentId)
       .order('birth_date', { ascending: false })
 
@@ -259,6 +259,15 @@ export default function Kids() {
     const { error } = await supabase.from('child_profiles').delete().eq('id', kid.id)
     if (error) setError('No se pudo eliminar. Intenta de nuevo.')
     else await loadKids()
+  }
+
+  const hasStamp = (kid, stamp) => {
+    return stamp.automatic || (kid.passport_stamps || []).some(item => item.stamp_key === stamp.id)
+  }
+
+  const earnedStampCount = (kid) => {
+    const earnedKeys = new Set((kid.passport_stamps || []).map(item => item.stamp_key))
+    return 1 + earnedKeys.size
   }
 
   return (
@@ -414,7 +423,7 @@ export default function Kids() {
 
             <div style={C.stampStats}>
               <div style={C.miniStat}>
-                <p style={C.miniStatNum}>1</p>
+                <p style={C.miniStatNum}>{earnedStampCount(selectedPassport)}</p>
                 <p style={C.miniStatLabel}>SELLO GANADO</p>
               </div>
               <div style={C.miniStat}>
@@ -426,11 +435,11 @@ export default function Kids() {
             <p style={C.sectionTitle}>SELLOS</p>
             <div style={C.stampGrid}>
               {PASSPORT_STAMPS.map(stamp => (
-                <div key={stamp.id} style={stamp.unlocked ? C.stamp : C.stampLocked}>
+                <div key={stamp.id} style={hasStamp(selectedPassport, stamp) ? C.stamp : C.stampLocked}>
                   <p style={C.stampIcon}>{stamp.icon}</p>
                   <p style={C.stampName}>{stamp.name}</p>
-                  <p style={stamp.unlocked ? C.stampState : C.stampStateLocked}>
-                    {stamp.unlocked ? 'DESBLOQUEADO' : 'POR GANAR'}
+                  <p style={hasStamp(selectedPassport, stamp) ? C.stampState : C.stampStateLocked}>
+                    {hasStamp(selectedPassport, stamp) ? 'DESBLOQUEADO' : 'POR GANAR'}
                   </p>
                 </div>
               ))}
