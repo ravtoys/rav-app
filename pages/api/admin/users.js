@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, avatar_url, points, level, created_at')
+      .select('id, full_name, phone, city, country, avatar_url, points, level, created_at')
       .order('created_at', { ascending: false })
 
     if (profilesError) throw profilesError
