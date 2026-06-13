@@ -59,8 +59,10 @@ const C = {
   btn: { width:'100%', padding:'14px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:14, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   ghostBtn: { width:'100%', padding:'12px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginTop:8 },
   err: { color:'#ff6666', fontSize:12, marginBottom:10 },
-  consentRow: { display:'flex', gap:9, alignItems:'flex-start', color:'rgba(255,255,255,0.58)', fontSize:11, lineHeight:1.35, marginBottom:14 },
-  checkbox: { marginTop:2, accentColor:'#AAEB3A' },
+  consentBox: { display:'flex', gap:12, alignItems:'flex-start', padding:'12px', borderRadius:14, border:'1.5px solid rgba(170,235,58,0.55)', background:'rgba(170,235,58,0.08)', cursor:'pointer', marginBottom:14 },
+  checkbox: { width:22, height:22, marginTop:1, accentColor:'#AAEB3A', flexShrink:0, cursor:'pointer' },
+  consentTitle: { color:'#AAEB3A', fontSize:13, fontWeight:900, marginBottom:4 },
+  consentText: { color:'rgba(255,255,255,0.72)', fontSize:11, lineHeight:1.35 },
   sectionTitle: { fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.35)', letterSpacing:1, margin:'2px 0 10px' },
   empty: { textAlign:'center', padding:'34px 18px', color:'rgba(255,255,255,0.42)', fontSize:13, lineHeight:1.45 },
   card: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.18)', borderRadius:14, padding:14, marginBottom:10 },
@@ -334,14 +336,17 @@ export default function Kids() {
           </div>
 
           {!editingId && (
-            <label style={C.consentRow}>
+            <label style={C.consentBox}>
               <input
                 style={C.checkbox}
                 type="checkbox"
                 checked={kidsConsent}
                 onChange={e => setKidsConsent(e.target.checked)}
               />
-              <span>{KIDS_CONSENT_TEXT}</span>
+              <span>
+                <span style={C.consentTitle}>Sí, soy madre, padre o acudiente y autorizo</span>
+                <span style={C.consentText}>{KIDS_CONSENT_TEXT}</span>
+              </span>
             </label>
           )}
 
