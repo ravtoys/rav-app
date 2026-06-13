@@ -138,7 +138,9 @@ export default function Admin() {
 
   const filtered = users.filter(u =>
     (u.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (u.email || '').toLowerCase().includes(search.toLowerCase())
+    (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.city || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.country || '').toLowerCase().includes(search.toLowerCase())
   )
 
   const totalUsers = users.length
@@ -207,6 +209,7 @@ export default function Admin() {
               <p style={C.userName}>{user.full_name || 'Sin nombre'}</p>
               <p style={C.userEmail}>{user.email || 'Sin email'}</p>
               <p style={C.userEmail}>{user.phone || 'Sin teléfono'}</p>
+              <p style={C.userEmail}>{[user.city, user.country].filter(Boolean).join(', ') || 'Sin ubicación'}</p>
               <span style={C.userLevel}>{getLevel(user.points || 0)}</span>
             </div>
             <div>
