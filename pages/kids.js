@@ -1,0 +1,313 @@
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
+import { supabase } from '../lib/supabase'
+import Navbar from '../components/Navbar'
+
+const INTERESTS = [
+  'Dinosaurios',
+  'Muñecas',
+  'Carros',
+  'Ciencia',
+  'Arte',
+  'Bebés',
+  'Construcción',
+  'Peluches',
+  'Juegos de mesa',
+  'Fantasía',
+  'Superhéroes',
+  'Tecnología',
+]
+
+const AVATARS = [
+  { id:'alien', icon:'👽', label:'Alien' },
+  { id:'rocket', icon:'🚀', label:'Cohete' },
+  { id:'star', icon:'⭐', label:'Estrella' },
+  { id:'planet', icon:'🪐', label:'Planeta' },
+  { id:'helmet', icon:'🧑‍🚀', label:'Casco' },
+]
+
+const C = {
+  page: { minHeight:'100vh', background:'#080618', paddingBottom:92 },
+  header: { background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', padding:'22px 20px 18px' },
+  eyebrow: { fontSize:11, color:'rgba(170,235,58,0.7)', fontWeight:900, letterSpacing:1, marginBottom:4 },
+  title: { fontFamily:"'Exo 2',sans-serif", fontSize:22, fontWeight:900, color:'white', lineHeight:1.1 },
+  sub: { fontSize:12, color:'rgba(255,255,255,0.58)', marginTop:8, lineHeight:1.45 },
+  body: { padding:'14px 16px' },
+  panel: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:14, marginBottom:14 },
+  row: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 },
+  label: { fontSize:10, color:'rgba(170,235,58,0.65)', fontWeight:900, letterSpacing:1, margin:'0 0 6px' },
+  input: { width:'100%', padding:'12px 13px', borderRadius:12, border:'1px solid rgba(170,235,58,0.28)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginBottom:12 },
+  pills: { display:'flex', flexWrap:'wrap', gap:8, marginBottom:14 },
+  pill: { padding:'7px 10px', borderRadius:16, border:'1px solid rgba(255,255,255,0.12)', background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.62)', fontSize:11, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  pillActive: { padding:'7px 10px', borderRadius:16, border:'1px solid #AAEB3A', background:'rgba(170,235,58,0.16)', color:'#AAEB3A', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  avatarRow: { display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:14 },
+  avatarBtn: { height:50, borderRadius:14, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'white', fontSize:23, cursor:'pointer' },
+  avatarBtnActive: { height:50, borderRadius:14, border:'1.5px solid #AAEB3A', background:'rgba(170,235,58,0.16)', color:'white', fontSize:23, cursor:'pointer' },
+  btn: { width:'100%', padding:'14px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:14, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  ghostBtn: { width:'100%', padding:'12px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginTop:8 },
+  err: { color:'#ff6666', fontSize:12, marginBottom:10 },
+  sectionTitle: { fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.35)', letterSpacing:1, margin:'2px 0 10px' },
+  empty: { textAlign:'center', padding:'34px 18px', color:'rgba(255,255,255,0.42)', fontSize:13, lineHeight:1.45 },
+  card: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.18)', borderRadius:14, padding:14, marginBottom:10 },
+  cardTop: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:12 },
+  cardLeft: { display:'flex', alignItems:'center', gap:12, minWidth:0 },
+  avatar: { width:48, height:48, borderRadius:16, background:'rgba(170,235,58,0.15)', border:'1px solid rgba(170,235,58,0.35)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:25, flexShrink:0 },
+  name: { color:'white', fontSize:15, fontWeight:900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  meta: { color:'rgba(255,255,255,0.45)', fontSize:11, marginTop:3 },
+  countdown: { color:'#AAEB3A', fontSize:11, fontWeight:900, textAlign:'right' },
+  cardBtns: { display:'flex', gap:8, marginTop:12 },
+  smallBtn: { flex:1, padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'transparent', color:'#AAEB3A', fontSize:12, fontWeight:900, cursor:'pointer' },
+  deleteBtn: { flex:1, padding:'10px', borderRadius:12, border:'1px solid rgba(255,100,100,0.25)', background:'rgba(200,30,30,0.08)', color:'#ff6666', fontSize:12, fontWeight:900, cursor:'pointer' },
+  disabledBtn: { width:'100%', padding:'10px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.32)', fontSize:11, fontWeight:900, marginTop:10 },
+}
+
+const blankForm = {
+  nickname: '',
+  birth_date: '',
+  interests: [],
+  avatar: 'alien',
+}
+
+function getAvatarIcon(id) {
+  return AVATARS.find((avatar) => avatar.id === id)?.icon || '👽'
+}
+
+function calculateAge(date) {
+  const birth = new Date(`${date}T00:00:00`)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1
+  return age
+}
+
+function getBirthdayCountdown(date) {
+  const today = new Date()
+  const birth = new Date(`${date}T00:00:00`)
+  const next = new Date(today.getFullYear(), birth.getMonth(), birth.getDate())
+  next.setHours(0, 0, 0, 0)
+  const start = new Date(today)
+  start.setHours(0, 0, 0, 0)
+  if (next < start) next.setFullYear(today.getFullYear() + 1)
+  const days = Math.ceil((next - start) / (1000 * 60 * 60 * 24))
+  if (days === 0) return 'Cumple hoy 🎉'
+  if (days === 1) return 'Cumple mañana'
+  return `${days} días para su cumple`
+}
+
+export default function Kids() {
+  const [userId, setUserId] = useState('')
+  const [kids, setKids] = useState([])
+  const [form, setForm] = useState(blankForm)
+  const [editingId, setEditingId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
+      setUserId(user.id)
+      await loadKids(user.id)
+    }
+    load()
+  }, [])
+
+  const loadKids = async (parentId = userId) => {
+    const { data, error } = await supabase
+      .from('child_profiles')
+      .select('*')
+      .eq('parent_id', parentId)
+      .order('birth_date', { ascending: false })
+
+    if (!error) setKids(data || [])
+    setLoading(false)
+  }
+
+  const toggleInterest = (interest) => {
+    setForm(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(item => item !== interest)
+        : [...prev.interests, interest],
+    }))
+  }
+
+  const resetForm = () => {
+    setForm(blankForm)
+    setEditingId('')
+    setError('')
+  }
+
+  const startEdit = (kid) => {
+    setForm({
+      nickname: kid.nickname || '',
+      birth_date: kid.birth_date || '',
+      interests: kid.interests || [],
+      avatar: kid.avatar || 'alien',
+    })
+    setEditingId(kid.id)
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const saveKid = async () => {
+    if (!form.nickname.trim() || !form.birth_date) {
+      setError('Nombre y cumpleaños son obligatorios')
+      return
+    }
+
+    if (new Date(`${form.birth_date}T00:00:00`) > new Date()) {
+      setError('La fecha de cumpleaños no puede estar en el futuro')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    const payload = {
+      parent_id: userId,
+      nickname: form.nickname.trim(),
+      birth_date: form.birth_date,
+      interests: form.interests,
+      avatar: form.avatar,
+      updated_at: new Date().toISOString(),
+    }
+
+    const result = editingId
+      ? await supabase.from('child_profiles').update(payload).eq('id', editingId)
+      : await supabase.from('child_profiles').insert(payload)
+
+    if (result.error) {
+      setError('No se pudo guardar. Intenta de nuevo.')
+    } else {
+      resetForm()
+      await loadKids()
+    }
+
+    setSaving(false)
+  }
+
+  const deleteKid = async (kid) => {
+    const ok = window.confirm(`¿Eliminar el perfil de ${kid.nickname}?`)
+    if (!ok) return
+    const { error } = await supabase.from('child_profiles').delete().eq('id', kid.id)
+    if (error) setError('No se pudo eliminar. Intenta de nuevo.')
+    else await loadKids()
+  }
+
+  return (
+    <div style={C.page}>
+      <div style={C.header}>
+        <p style={C.eyebrow}>MIS PEQUES</p>
+        <p style={C.title}>Mis Pequeños Exploradores</p>
+        <p style={C.sub}>Abre un universo de sorpresas pensadas para sus gustos, su edad y sus aventuras.</p>
+      </div>
+
+      <div style={C.body}>
+        <div style={C.panel}>
+          <p style={C.sectionTitle}>{editingId ? 'EDITAR EXPLORADOR' : 'CREAR EXPLORADOR'}</p>
+          {error && <p style={C.err}>{error}</p>}
+
+          <label style={C.label}>NOMBRE O APODO</label>
+          <input
+            style={C.input}
+            placeholder="Ej: Sofi, Mateo, Vale"
+            value={form.nickname}
+            onChange={e => setForm(prev => ({ ...prev, nickname: e.target.value }))}
+          />
+
+          <div style={C.row}>
+            <div>
+              <label style={C.label}>CUMPLEAÑOS</label>
+              <input
+                style={C.input}
+                type="date"
+                value={form.birth_date}
+                onChange={e => setForm(prev => ({ ...prev, birth_date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label style={C.label}>AVATAR</label>
+              <div style={C.avatarRow}>
+                {AVATARS.map(avatar => (
+                  <button
+                    key={avatar.id}
+                    style={form.avatar === avatar.id ? C.avatarBtnActive : C.avatarBtn}
+                    onClick={() => setForm(prev => ({ ...prev, avatar: avatar.id }))}
+                    title={avatar.label}
+                    type="button"
+                  >
+                    {avatar.icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <label style={C.label}>GUSTOS FAVORITOS</label>
+          <div style={C.pills}>
+            {INTERESTS.map(interest => (
+              <button
+                key={interest}
+                style={form.interests.includes(interest) ? C.pillActive : C.pill}
+                onClick={() => toggleInterest(interest)}
+                type="button"
+              >
+                {interest}
+              </button>
+            ))}
+          </div>
+
+          <button style={C.btn} onClick={saveKid} disabled={saving}>
+            {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar peque'}
+          </button>
+          {editingId && <button style={C.ghostBtn} onClick={resetForm}>Cancelar edición</button>}
+        </div>
+
+        <p style={C.sectionTitle}>EXPLORADORES GUARDADOS</p>
+        {loading && <p style={C.empty}>Cargando...</p>}
+        {!loading && kids.length === 0 && (
+          <div style={C.panel}>
+            <div style={C.empty}>
+              <p style={{ fontSize:36, marginBottom:8 }}>🛸</p>
+              <p>Aún no tienes pequeños exploradores.</p>
+              <p style={{ color:'rgba(170,235,58,0.55)', marginTop:4 }}>Crea el primero y empecemos la misión.</p>
+            </div>
+          </div>
+        )}
+
+        {kids.map(kid => (
+          <div key={kid.id} style={C.card}>
+            <div style={C.cardTop}>
+              <div style={C.cardLeft}>
+                <div style={C.avatar}>{getAvatarIcon(kid.avatar)}</div>
+                <div style={{ minWidth:0 }}>
+                  <p style={C.name}>{kid.nickname}</p>
+                  <p style={C.meta}>{calculateAge(kid.birth_date)} años · {new Date(`${kid.birth_date}T00:00:00`).toLocaleDateString('es-CO', { day:'numeric', month:'long' })}</p>
+                </div>
+              </div>
+              <p style={C.countdown}>{getBirthdayCountdown(kid.birth_date)}</p>
+            </div>
+
+            {!!kid.interests?.length && (
+              <div style={C.pills}>
+                {kid.interests.map(interest => <span key={interest} style={C.pillActive}>{interest}</span>)}
+              </div>
+            )}
+
+            <button style={C.disabledBtn} disabled>Wishlist próximamente</button>
+            <div style={C.cardBtns}>
+              <button style={C.smallBtn} onClick={() => startEdit(kid)}>Editar</button>
+              <button style={C.deleteBtn} onClick={() => deleteKid(kid)}>Eliminar</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Navbar active="kids" />
+    </div>
+  )
+}
