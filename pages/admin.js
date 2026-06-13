@@ -36,6 +36,9 @@ const C = {
   kidCountdown: { fontSize:11, fontWeight:900, color:'#AAEB3A', textAlign:'right', whiteSpace:'nowrap' },
   interestsRow: { display:'flex', flexWrap:'wrap', gap:6, marginTop:6 },
   interestPill: { padding:'4px 7px', borderRadius:10, background:'rgba(170,235,58,0.12)', border:'1px solid rgba(170,235,58,0.22)', color:'rgba(170,235,58,0.82)', fontSize:10, fontWeight:800 },
+  consentLine: { fontSize:10, color:'rgba(255,255,255,0.42)', marginTop:6 },
+  consentOk: { color:'#AAEB3A', fontWeight:900 },
+  consentMissing: { color:'#ff6666', fontWeight:900 },
   err: { color:'#ff6666', fontSize:12, marginTop:4 },
   empty: { textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:14, marginTop:40 },
   sectionTitle: { fontSize:11, fontWeight:800, color:'rgba(255,255,255,0.35)', letterSpacing:1, marginBottom:12 },
@@ -79,6 +82,11 @@ function getAvatarIcon(id) {
     helmet: '🧑‍🚀',
   }
   return avatars[id] || '👽'
+}
+
+function formatConsentDate(date) {
+  if (!date) return ''
+  return new Date(date).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' })
 }
 
 export default function Admin() {
@@ -273,6 +281,18 @@ export default function Admin() {
               <p style={C.userEmail}>{user.email || 'Sin email'}</p>
               <p style={C.userEmail}>{user.phone || 'Sin teléfono'}</p>
               <p style={C.userEmail}>{[user.city, user.country].filter(Boolean).join(', ') || 'Sin ubicación'}</p>
+              <p style={C.consentLine}>
+                Datos/marketing:{' '}
+                {user.marketing_consent
+                  ? <span style={C.consentOk}>Sí · {formatConsentDate(user.marketing_consent_at)}</span>
+                  : <span style={C.consentMissing}>Pendiente</span>}
+              </p>
+              <p style={C.consentLine}>
+                Datos de peques:{' '}
+                {user.kids_data_consent
+                  ? <span style={C.consentOk}>Sí · {formatConsentDate(user.kids_data_consent_at)}</span>
+                  : <span style={C.consentMissing}>Pendiente</span>}
+              </p>
               <span style={C.userLevel}>{getLevel(user.points || 0)}</span>
             </div>
             <div>
@@ -289,6 +309,12 @@ export default function Admin() {
                     <p style={C.kidName}>{getAvatarIcon(child.avatar)} {child.nickname}</p>
                     <p style={C.kidMeta}>
                       {calculateAge(child.birth_date)} años · {new Date(`${child.birth_date}T00:00:00`).toLocaleDateString('es-CO', { day:'numeric', month:'long' })}
+                    </p>
+                    <p style={C.consentLine}>
+                      Consentimiento:{' '}
+                      {child.consent_at
+                        ? <span style={C.consentOk}>Sí · {formatConsentDate(child.consent_at)}</span>
+                        : <span style={C.consentMissing}>Pendiente</span>}
                     </p>
                     {!!child.interests?.length && (
                       <div style={C.interestsRow}>
