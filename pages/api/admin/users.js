@@ -28,10 +28,24 @@ export default async function handler(req, res) {
     const { data: authData, error: usersError } = await supabase.auth.admin.listUsers()
     if (usersError) throw usersError
 
+    const { data: childProfiles, error: childProfilesError } = await supabase
+      .from('child_profiles')
+      .select('id, parent_id, nickname, birth_date, interests, avatar, created_at')
+      .order('birth_date', { ascending: true })
+
+    if (childProfilesError) throw childProfilesError
+
     const emailById = new Map((authData?.users || []).map((user) => [user.id, user.email]))
+    const childrenByParentId = (childProfiles || []).reduce((map, child) => {
+      if (!map.has(child.parent_id)) map.set(child.parent_id, [])
+      map.get(child.parent_id).push(child)
+      return map
+    }, new Map())
+
     const users = (profiles || []).map((profile) => ({
       ...profile,
       email: emailById.get(profile.id) || '',
+      children: childrenByParentId.get(profile.id) || [],
     }))
 
     return res.status(200).json({ users })
