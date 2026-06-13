@@ -23,6 +23,8 @@ const C = {
 export default function EditProfile() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('Colombia')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [userId, setUserId] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -41,6 +43,8 @@ export default function EditProfile() {
       if (data) {
         setName(data.full_name || '')
         setPhone(data.phone || '')
+        setCity(data.city || '')
+        setCountry(data.country || 'Colombia')
         setAvatarUrl(data.avatar_url || '')
       }
     }
@@ -73,9 +77,15 @@ export default function EditProfile() {
 
   const handleSave = async () => {
     if (!name) { setError('El nombre es obligatorio'); return }
+    const cleanPhone = phone.replace(/\s/g, '')
+    if (!cleanPhone || !/^\+\d{8,15}$/.test(cleanPhone)) { setError('Escribe tu teléfono con indicativo. Ej: +57 3001234567'); return }
+    if (!city || !country) { setError('Ciudad y país son obligatorios'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.from('profiles').update({ full_name: name, phone }).eq('id', userId)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: name, phone: cleanPhone, city, country })
+      .eq('id', userId)
     if (error) setError('Error al guardar. Intenta de nuevo.')
     else {
       setMsg('¡Perfil actualizado! ✅')
@@ -113,7 +123,13 @@ export default function EditProfile() {
         <input style={C.input} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
 
         <label style={C.label}>TELÉFONO</label>
-        <input style={C.input} placeholder="Ej: 300 123 4567" value={phone} onChange={e => setPhone(e.target.value)} />
+        <input style={C.input} placeholder="Ej: +57 3001234567" value={phone} onChange={e => setPhone(e.target.value)} />
+
+        <label style={C.label}>CIUDAD</label>
+        <input style={C.input} placeholder="Ej: Medellín" value={city} onChange={e => setCity(e.target.value)} />
+
+        <label style={C.label}>PAÍS</label>
+        <input style={C.input} placeholder="Ej: Colombia" value={country} onChange={e => setCountry(e.target.value)} />
 
         <button style={C.btn} onClick={handleSave} disabled={loading}>
           {loading ? 'Guardando...' : 'Guardar cambios'}
