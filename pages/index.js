@@ -13,8 +13,12 @@ const C = {
   btnOut: { padding:'14px', borderRadius:14, border:'1.5px solid rgba(170,235,58,0.4)', background:'transparent', color:'#AAEB3A', fontSize:15, fontWeight:700, width:'100%' },
   toggle: { textAlign:'center', color:'rgba(255,255,255,0.5)', fontSize:13, marginTop:4, cursor:'pointer' },
   err: { color:'#ff6666', fontSize:13, textAlign:'center' },
+  consentRow: { display:'flex', gap:9, alignItems:'flex-start', color:'rgba(255,255,255,0.58)', fontSize:11, lineHeight:1.35 },
+  checkbox: { marginTop:2, accentColor:'#AAEB3A' },
   foot: { color:'rgba(255,255,255,0.2)', fontSize:11, textAlign:'center', marginTop:16 },
 }
+
+const GENERAL_CONSENT_TEXT = 'Autorizo a RAV Toys a tratar mis datos personales para gestionar mi cuenta RAV Club, beneficios, recomendaciones y comunicaciones comerciales por email, WhatsApp o SMS. Entiendo que puedo solicitar actualizar o eliminar mis datos.'
 
 export default function Welcome() {
   const [mode, setMode] = useState('login')
@@ -24,6 +28,7 @@ export default function Welcome() {
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('Colombia')
   const [password, setPassword] = useState('')
+  const [consent, setConsent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -42,10 +47,22 @@ export default function Welcome() {
   const handleSignup = async () => {
     if (!name || !email || !phone || !city || !country || !password) { setError('Por favor completa todos los campos'); return }
     if (!isValidPhone) { setError('Escribe tu teléfono con indicativo. Ej: +57 3001234567'); return }
+    if (!consent) { setError('Debes autorizar el uso de tus datos para crear tu cuenta'); return }
     setLoading(true); setError('')
+    const consentAt = new Date().toISOString()
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: name, phone: cleanPhone, city, country } }
+      options: {
+        data: {
+          full_name: name,
+          phone: cleanPhone,
+          city,
+          country,
+          marketing_consent: true,
+          marketing_consent_at: consentAt,
+          marketing_consent_text: GENERAL_CONSENT_TEXT,
+        }
+      }
     })
     if (error) {
       setError(error.message)
@@ -54,7 +71,15 @@ export default function Welcome() {
       if (userId) {
         await supabase
           .from('profiles')
-          .update({ full_name: name, phone: cleanPhone, city, country })
+          .update({
+            full_name: name,
+            phone: cleanPhone,
+            city,
+            country,
+            marketing_consent: true,
+            marketing_consent_at: consentAt,
+            marketing_consent_text: GENERAL_CONSENT_TEXT,
+          })
           .eq('id', userId)
       }
       router.push('/home')
@@ -132,6 +157,15 @@ export default function Welcome() {
             <input placeholder="Teléfono con indicativo. Ej: +57 3001234567" value={phone} onChange={e => setPhone(e.target.value)} />
             <input placeholder="Ciudad" value={city} onChange={e => setCity(e.target.value)} />
             <input placeholder="País" value={country} onChange={e => setCountry(e.target.value)} />
+            <label style={C.consentRow}>
+              <input
+                style={C.checkbox}
+                type="checkbox"
+                checked={consent}
+                onChange={e => setConsent(e.target.checked)}
+              />
+              <span>{GENERAL_CONSENT_TEXT}</span>
+            </label>
           </>
         )}
         <input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} />
