@@ -75,7 +75,7 @@ const C = {
   barInfo: { position:'relative', zIndex:2, display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, marginTop:8, fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:700 },
   barLeft: { color:'#FFD84D' },
   barRight: { color:'#7FA8D8', textAlign:'right' },
-  mascotPeek: { position:'absolute', right:-18, bottom:-24, width:116, opacity:.94, filter:'drop-shadow(0 10px 18px rgba(0,0,0,.45))', animation:'float-soft 5s ease-in-out infinite' },
+  mascotPeek: { position:'absolute', right:-12, bottom:-30, width:98, opacity:.88, zIndex:1, pointerEvents:'none', filter:'drop-shadow(0 10px 18px rgba(0,0,0,.45))', animation:'float-soft 5s ease-in-out infinite' },
   sectionTitle: { fontFamily:"'Bungee',sans-serif", color:'#FBEFC8', fontSize:13, textTransform:'uppercase', margin:'18px 0 10px', letterSpacing:'.02em' },
   play: { color:'#FF6B3D', marginRight:7 },
   grid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:13 },
