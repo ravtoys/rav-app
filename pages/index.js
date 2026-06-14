@@ -184,6 +184,11 @@ export default function Welcome() {
         <p style={C.toggle} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}>
           {mode === 'login' ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Inicia sesión'}
         </p>
+        {mode === 'login' && (
+          <p style={{ ...C.toggle, color:'#AAEB3A', marginTop:0 }} onClick={() => router.push('/forgot-password')}>
+            ¿Olvidaste tu contraseña?
+          </p>
+        )}
         <p style={C.foot}>RAV Toys · Medellín, Colombia 🌌</p>
       </div>
     </div>
