@@ -42,6 +42,13 @@ export default async function handler(req, res) {
 
     if (passportStampsError) throw passportStampsError
 
+    const { data: wishlistItemsData, error: wishlistItemsError } = await supabase
+      .from('wishlist_items')
+      .select('id, user_id, child_id, title, image_url, price, product_url, status, source, created_at')
+      .order('created_at', { ascending: false })
+
+    const wishlistItems = wishlistItemsError ? [] : (wishlistItemsData || [])
+
     const emailById = new Map((authData?.users || []).map((user) => [user.id, user.email]))
     const stampsByChildId = (passportStamps || []).reduce((map, stamp) => {
       if (!map.has(stamp.child_id)) map.set(stamp.child_id, [])
@@ -56,10 +63,21 @@ export default async function handler(req, res) {
       return map
     }, new Map())
 
+    const childNameById = new Map((childProfiles || []).map((child) => [child.id, child.nickname]))
+    const wishlistByUserId = wishlistItems.reduce((map, item) => {
+      if (!map.has(item.user_id)) map.set(item.user_id, [])
+      map.get(item.user_id).push({
+        ...item,
+        child_name: item.child_id ? childNameById.get(item.child_id) || 'Peque' : 'General',
+      })
+      return map
+    }, new Map())
+
     const users = (profiles || []).map((profile) => ({
       ...profile,
       email: emailById.get(profile.id) || '',
       children: childrenByParentId.get(profile.id) || [],
+      wishlist_items: wishlistByUserId.get(profile.id) || [],
     }))
 
     return res.status(200).json({ users })
