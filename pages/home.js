@@ -109,19 +109,56 @@ function MiniRavBadge() {
 }
 
 function TicketIcon() {
-  return <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 11.5 21.5 6l2 5.3a4 4 0 0 0 2.5 7l2 5.2L11.5 29l-2-5.3a4 4 0 0 0-2.5-7L5 11.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="m16.5 13.2 1.1 2.3 2.5.4-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.4 1.1-2.3Z" fill="currentColor" opacity=".78"/><path d="m9 12.5 1 2.7M22 22l1 2.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".55"/></svg>
+  return (
+    <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <circle cx="20" cy="20" r="13.5" fill="#FFD84D" stroke="#FBEFC8" strokeWidth="1.8"/>
+      <circle cx="20" cy="20" r="10" fill="#E8A928" opacity=".42"/>
+      <path d="m20 11.6 2.2 4.5 4.9.7-3.6 3.5.9 4.9-4.4-2.3-4.4 2.3.9-4.9-3.6-3.5 4.9-.7 2.2-4.5Z" fill="#0E1B3A" opacity=".82"/>
+      <path d="M11.5 14.4c2.5-3.2 6-4.6 10.4-4.2" stroke="#FBEFC8" strokeWidth="2" strokeLinecap="round" opacity=".9"/>
+      <path d="m30.7 8.5.8 1.7 1.9.3-1.4 1.3.3 1.9-1.6-.9-1.7.9.3-1.9-1.3-1.3 1.8-.3.9-1.7ZM8.4 27.5l.6 1.2 1.3.2-1 .9.3 1.3-1.2-.6-1.2.6.3-1.3-1-.9 1.3-.2.6-1.2Z" fill="#FBEFC8"/>
+    </svg>
+  )
 }
 
 function RocketTrailIcon() {
-  return <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M18.5 5.5c3-3 6.7-2.8 7.2-2.7.1.5.3 4.2-2.7 7.2l-8.1 8.1-4.5-4.5 8.1-8.1Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="m12.5 12.1-5.2 1 3-4.8M18.9 18.5l-1 5.2 4.8-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8.5 20.5c-1.6.4-2.9 1.2-4 2.4M12 23.7c-1.4.9-2.3 2-2.9 3.5M5.7 27.2h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="1 4"/><circle cx="21.2" cy="7.8" r="1.5" fill="currentColor"/></svg>
+  return (
+    <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <ellipse cx="20" cy="21" rx="9.5" ry="8.2" fill="#3FA9F5" stroke="#FBEFC8" strokeWidth="1.7"/>
+      <path d="M12 19.2c4.8-5.8 13-7.8 18.6-4.6 2.4 1.4 3 3.2 1.4 4.6-4.8 4.1-14.3 5.8-21.1 3.8-3.3-.9-3-2.2 1.1-3.8Z" fill="#FFD84D" opacity=".92"/>
+      <path d="M8.2 22.1c6.5 2.4 17.4.8 23.8-3.8" stroke="#FBEFC8" strokeWidth="1.5" strokeLinecap="round" opacity=".9"/>
+      <path d="M16 15.4c2.4-1.6 5.5-2 8.1-.9" stroke="#9FD8FF" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="31.2" cy="9.6" r="2.4" fill="#FBEFC8"/>
+      <circle cx="11" cy="29" r="1.5" fill="#FFD84D"/>
+    </svg>
+  )
 }
 
 function UfoGiftIcon() {
-  return <svg width="30" height="30" viewBox="0 0 34 34" fill="none" aria-hidden="true"><path d="M7 12.5c2-4 18-4 20 0 1.2 2.3-3.4 5-10 5s-11.2-2.7-10-5Z" stroke="currentColor" strokeWidth="2"/><path d="M4 16.5c4.2 4 21.8 4 26 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M13 21h8l-1.2 7h-5.6L13 21Z" fill="currentColor" opacity=".18"/><path d="M13.5 24h7M17 21v7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M14 24h6v4h-6z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="12" cy="15" r="1.2" fill="currentColor"/><circle cx="17" cy="15.5" r="1.2" fill="currentColor"/><circle cx="22" cy="15" r="1.2" fill="currentColor"/></svg>
+  return (
+    <svg width="36" height="36" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+      <path d="M13.5 17.3c1.1-5.2 13.9-5.2 15 0" fill="#9FD8FF" opacity=".65"/>
+      <path d="M13.5 17.3c1.1-5.2 13.9-5.2 15 0" stroke="#FBEFC8" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M16.2 16.7c.3-3.2 9.3-3.2 9.6 0" fill="#BDF24A"/>
+      <circle cx="19.2" cy="14.9" r="1.2" fill="#063B13"/><circle cx="22.8" cy="14.9" r="1.2" fill="#063B13"/><circle cx="21" cy="13.1" r=".9" fill="#063B13"/>
+      <path d="M6.5 20.2c3.8-6 25.2-6 29 0 1.8 2.8-4.9 6.1-14.5 6.1S4.7 23 6.5 20.2Z" fill="#D6DCE8" stroke="#FBEFC8" strokeWidth="1.8"/>
+      <path d="M8 21.4c5.4 2.6 20.6 2.6 26 0" stroke="#7FA8D8" strokeWidth="1.7" strokeLinecap="round"/>
+      <circle cx="14" cy="22.3" r="1.6" fill="#FF6B3D"/><circle cx="21" cy="23" r="1.6" fill="#FFD84D"/><circle cx="28" cy="22.3" r="1.6" fill="#3FA9F5"/>
+      <path d="M16 27h10l-2.2 8h-5.6L16 27Z" fill="#3FA9F5" opacity=".16"/>
+      <path d="M17 31h8" stroke="#3FA9F5" strokeWidth="1.5" strokeLinecap="round" opacity=".75"/>
+    </svg>
+  )
 }
 
 function CometIcon() {
-  return <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="m22 5-2.1 4.3L15 10l3.5 3.4-.8 4.8L22 16l4.3 2.2-.8-4.8L29 10l-4.9-.7L22 5Z" fill="currentColor"/><path d="M16 18c-3.8 1-7.5 2.9-11 6M14 13c-3.2.3-6.3 1.2-9.2 2.7M20 22c-2.1 1.3-4 2.9-5.7 4.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity=".62"/></svg>
+  return (
+    <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M19 16C14.7 17 10.2 19.5 5.5 23.6" stroke="#8B7FE0" strokeWidth="4" strokeLinecap="round"/>
+      <path d="M20.6 20.2c-3.6 1.3-7.1 3.7-10.5 7.1" stroke="#3FA9F5" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M15.8 11.9c-3.6.2-6.8 1.1-9.7 2.8" stroke="#BDF24A" strokeWidth="2" strokeLinecap="round" opacity=".9"/>
+      <path d="m27.2 6.2 2.4 5 5.5.8-4 3.9 1 5.5-4.9-2.6-4.9 2.6 1-5.5-4-3.9 5.5-.8 2.4-5Z" fill="#FBEFC8" stroke="#FFD84D" strokeWidth="1.6" strokeLinejoin="round"/>
+      <path d="m11.2 28.4.7 1.4 1.5.2-1.1 1 .3 1.6-1.4-.8-1.4.8.3-1.6-1.1-1 1.5-.2.7-1.4ZM7 8.4l.5 1 1.1.1-.8.8.2 1.1-1-.5-1 .5.2-1.1-.8-.8 1.1-.1.5-1Z" fill="#BDF24A"/>
+    </svg>
+  )
 }
 
 function SmallRocketIcon() {
