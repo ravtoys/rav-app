@@ -55,6 +55,11 @@ const C = {
   passportPanel: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.16)', borderRadius:10, padding:10, marginTop:10 },
   passportMini: { display:'flex', flexWrap:'wrap', gap:8, marginTop:6 },
   passportChip: { padding:'4px 7px', borderRadius:10, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.62)', fontSize:10, fontWeight:800 },
+  wishlistPanel: { background:'rgba(170,235,58,0.05)', border:'1px solid rgba(170,235,58,0.16)', borderRadius:12, padding:'10px 12px', margin:'10px 0 12px' },
+  wishlistRow: { display:'flex', justifyContent:'space-between', gap:12, padding:'8px 0', borderTop:'1px solid rgba(255,255,255,0.07)' },
+  wishlistName: { color:'white', fontSize:12, fontWeight:900 },
+  wishlistMeta: { color:'rgba(255,255,255,0.48)', fontSize:10, marginTop:3 },
+  wishlistBadge: { display:'inline-block', padding:'4px 7px', borderRadius:10, background:'rgba(43,63,191,0.4)', border:'1px solid rgba(170,235,58,0.18)', color:'#AAEB3A', fontSize:10, fontWeight:900, whiteSpace:'nowrap' },
   stampForm: { display:'grid', gridTemplateColumns:'1.3fr 70px 1.5fr auto', gap:8, marginTop:10 },
   stampSelect: { minWidth:120, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
   stampInput: { minWidth:0, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
@@ -150,6 +155,20 @@ function buildBirthdayMessage(user, child) {
 function buildStarsMessage(user) {
   const parentName = getFirstName(user.full_name)
   return `Hola ${parentName}, tienes ${(user.points || 0).toLocaleString('es-CO')} Estrellas RAV en tu cuenta. Te esperamos para seguir sumando misiones y sorpresas en RAV Toys.`
+}
+
+function getWishlistStatusLabel(status) {
+  const labels = {
+    wanted: 'Deseado',
+    purchased: 'Comprado',
+    unavailable: 'Agotado',
+  }
+  return labels[status] || 'Deseado'
+}
+
+function formatPrice(price) {
+  if (price === null || price === undefined || price === '') return ''
+  return Number(price).toLocaleString('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:0 })
 }
 
 export default function Admin() {
@@ -312,6 +331,11 @@ export default function Admin() {
     (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.city || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.country || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.wishlist_items || []).some(item =>
+      (item.title || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.child_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      getWishlistStatusLabel(item.status).toLowerCase().includes(search.toLowerCase())
+    ) ||
     (u.children || []).some(child =>
       (child.nickname || '').toLowerCase().includes(search.toLowerCase()) ||
       (child.interests || []).some(interest => interest.toLowerCase().includes(search.toLowerCase()))
@@ -389,6 +413,13 @@ export default function Admin() {
     .sort((a, b) => a.daysToBirthday - b.daysToBirthday)
     .slice(0, 6)
   const generalMessages = usersReadyForWhatsApp.slice(0, 6)
+  const allWishlistItems = users.flatMap(user => user.wishlist_items || [])
+  const wishlistWanted = allWishlistItems.filter(item => item.status === 'wanted').length
+  const wishlistPurchased = allWishlistItems.filter(item => item.status === 'purchased').length
+  const wishlistUnavailable = allWishlistItems.filter(item => item.status === 'unavailable').length
+  const recentWishlistItems = [...allWishlistItems]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5)
 
   if (!authed) {
     return (
@@ -437,6 +468,42 @@ export default function Admin() {
         <div style={C.statCard}>
           <p style={C.statNum}>{birthdaySoon}</p>
           <p style={C.statLabel}>CUMPLES 30 DÍAS</p>
+        </div>
+      </div>
+
+      <p style={C.sectionTitle}>WISHLIST RAV</p>
+      <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))' }}>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{allWishlistItems.length}</p>
+          <p style={C.statLabel}>JUGUETES GUARDADOS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{wishlistWanted}</p>
+          <p style={C.statLabel}>DESEADOS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{wishlistPurchased}</p>
+          <p style={C.statLabel}>COMPRADOS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{wishlistUnavailable}</p>
+          <p style={C.statLabel}>AGOTADOS</p>
+        </div>
+      </div>
+
+      <div style={C.insightGrid}>
+        <div style={C.insightPanel}>
+          <p style={C.insightTitle}>ÚLTIMOS JUGUETES GUARDADOS</p>
+          {recentWishlistItems.length === 0 && <p style={C.kidMeta}>Aún no hay juguetes en Wishlist.</p>}
+          {recentWishlistItems.map(item => (
+            <div key={item.id} style={C.insightRow}>
+              <div>
+                <p style={C.insightName}>{item.title}</p>
+                <p style={C.insightMeta}>{item.child_name || 'General'} · {formatPrice(item.price) || 'Sin precio'}</p>
+              </div>
+              <p style={C.insightValue}>{getWishlistStatusLabel(item.status)}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -629,6 +696,25 @@ export default function Admin() {
               <p style={C.userPointsSub}>estrellas</p>
             </div>
           </div>
+          {!!user.wishlist_items?.length && (
+            <div style={C.wishlistPanel}>
+              <p style={C.kidsTitle}>WISHLIST</p>
+              {user.wishlist_items.slice(0, 4).map(item => (
+                <div key={item.id} style={C.wishlistRow}>
+                  <div>
+                    <p style={C.wishlistName}>🎁 {item.title}</p>
+                    <p style={C.wishlistMeta}>
+                      {item.child_name || 'General'} · {formatPrice(item.price) || 'Sin precio'}
+                    </p>
+                  </div>
+                  <span style={C.wishlistBadge}>{getWishlistStatusLabel(item.status)}</span>
+                </div>
+              ))}
+              {user.wishlist_items.length > 4 && (
+                <p style={C.wishlistMeta}>+{user.wishlist_items.length - 4} juguetes más</p>
+              )}
+            </div>
+          )}
           {!!user.children?.length && (
             <div style={C.kidsBox}>
               <p style={C.kidsTitle}>MIS PEQUES</p>
