@@ -76,6 +76,7 @@ const C = {
   smallBtn: { flex:1, padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'transparent', color:'#AAEB3A', fontSize:12, fontWeight:900, cursor:'pointer' },
   deleteBtn: { flex:1, padding:'10px', borderRadius:12, border:'1px solid rgba(255,100,100,0.25)', background:'rgba(200,30,30,0.08)', color:'#ff6666', fontSize:12, fontWeight:900, cursor:'pointer' },
   passportBtn: { width:'100%', padding:'12px', borderRadius:14, border:'1px solid rgba(170,235,58,0.55)', background:'linear-gradient(135deg,rgba(170,235,58,0.22),rgba(43,63,191,0.26))', color:'#AAEB3A', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginTop:10 },
+  wishlistBtn: { width:'100%', padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'rgba(255,255,255,0.04)', color:'#AAEB3A', fontSize:11, fontWeight:900, marginTop:10, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   disabledBtn: { width:'100%', padding:'10px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.32)', fontSize:11, fontWeight:900, marginTop:10 },
   overlay: { position:'fixed', inset:0, zIndex:20, background:'rgba(8,6,24,0.92)', padding:'16px', overflowY:'auto' },
   passport: { maxWidth:520, margin:'0 auto 92px', background:'linear-gradient(180deg,rgba(26,10,61,0.98),rgba(13,11,43,0.98))', border:'1px solid rgba(170,235,58,0.28)', borderRadius:18, padding:16, boxShadow:'0 18px 50px rgba(0,0,0,0.4)' },
@@ -390,7 +391,7 @@ export default function Kids() {
             <button style={C.passportBtn} onClick={() => setSelectedPassport(kid)}>
               Ver Pasaporte
             </button>
-            <button style={C.disabledBtn} disabled>Wishlist próximamente</button>
+            <button style={C.wishlistBtn} onClick={() => router.push('/wishlist')}>Ver Wishlist</button>
             <div style={C.cardBtns}>
               <button style={C.smallBtn} onClick={() => startEdit(kid)}>Editar</button>
               <button style={C.deleteBtn} onClick={() => deleteKid(kid)}>Eliminar</button>
