@@ -223,7 +223,7 @@ export default function Home() {
   if (!profile) {
     return (
       <div style={{ ...C.page, display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <p style={{ color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontWeight:700 }}>Cargando universo RAV...</p>
+        <p style={{ color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontWeight:700 }}>Cargando RAV Universo...</p>
       </div>
     )
   }
