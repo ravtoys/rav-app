@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
@@ -85,7 +85,13 @@ const C = {
   passportSub: { color:'rgba(255,255,255,0.58)', fontSize:12, lineHeight:1.45, marginTop:8 },
   closeBtn: { width:36, height:36, borderRadius:18, border:'1px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.06)', color:'white', fontSize:18, cursor:'pointer', flexShrink:0 },
   passportHero: { display:'flex', alignItems:'center', gap:12, background:'rgba(170,235,58,0.08)', border:'1px solid rgba(170,235,58,0.2)', borderRadius:16, padding:12, marginBottom:14 },
-  passportAvatar: { width:62, height:62, borderRadius:20, background:'rgba(170,235,58,0.16)', border:'1px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, flexShrink:0 },
+  passportPhotoWrap: { display:'flex', flexDirection:'column', alignItems:'center', gap:8, flexShrink:0 },
+  passportAvatar: { width:74, height:74, borderRadius:24, background:'rgba(170,235,58,0.16)', border:'1px solid rgba(170,235,58,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, flexShrink:0, overflow:'hidden', position:'relative', cursor:'pointer' },
+  passportAvatarImg: { width:'100%', height:'100%', objectFit:'cover' },
+  passportCameraBadge: { position:'absolute', right:4, bottom:4, minWidth:26, height:26, borderRadius:13, background:'#AAEB3A', color:'#080618', border:'2px solid #0d0b2b', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:900 },
+  passportPhotoBtn: { border:'1px solid rgba(170,235,58,0.45)', background:'rgba(170,235,58,0.1)', color:'#AAEB3A', borderRadius:12, padding:'7px 10px', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  passportPhotoHint: { color:'rgba(255,255,255,0.42)', fontSize:11, lineHeight:1.35, marginTop:5 },
+  success: { background:'rgba(170,235,58,0.15)', border:'1px solid #AAEB3A', borderRadius:12, padding:'10px 12px', fontSize:12, color:'#AAEB3A', fontWeight:800, marginBottom:12 },
   passportName: { color:'white', fontSize:18, fontWeight:900 },
   passportMeta: { color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:4 },
   stampStats: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 },
@@ -112,6 +118,10 @@ const KIDS_CONSENT_TEXT = 'Confirmo que soy madre, padre o acudiente del peque y
 
 function getAvatarIcon(id) {
   return AVATARS.find((avatar) => avatar.id === id)?.icon || '👽'
+}
+
+function getPassportImage(kid) {
+  return kid?.avatar_url || ''
 }
 
 function calculateAge(date) {
@@ -147,6 +157,10 @@ export default function Kids() {
   const [error, setError] = useState('')
   const [kidsConsent, setKidsConsent] = useState(false)
   const [selectedPassport, setSelectedPassport] = useState(null)
+  const [passportUploading, setPassportUploading] = useState(false)
+  const [passportMsg, setPassportMsg] = useState('')
+  const [passportError, setPassportError] = useState('')
+  const passportFileInputRef = useRef(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -273,6 +287,61 @@ export default function Kids() {
     return 1 + earnedKeys.size
   }
 
+  const openPassport = (kid) => {
+    setSelectedPassport(kid)
+    setPassportMsg('')
+    setPassportError('')
+  }
+
+  const updateKidEverywhere = (kidId, patch) => {
+    setKids(prev => prev.map(kid => kid.id === kidId ? { ...kid, ...patch } : kid))
+    setSelectedPassport(prev => prev?.id === kidId ? { ...prev, ...patch } : prev)
+  }
+
+  const handlePassportPhotoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !selectedPassport) return
+    if (file.size > 2 * 1024 * 1024) {
+      setPassportError('La imagen debe pesar menos de 2MB')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setPassportError('Elige una imagen válida')
+      return
+    }
+
+    setPassportUploading(true)
+    setPassportError('')
+    setPassportMsg('')
+
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${userId}/kids/${selectedPassport.id}-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { cacheControl: '3600', upsert: true })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+      const { error: dbError } = await supabase
+        .from('child_profiles')
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('id', selectedPassport.id)
+        .eq('parent_id', userId)
+      if (dbError) throw dbError
+
+      updateKidEverywhere(selectedPassport.id, { avatar_url: publicUrl })
+      setPassportMsg('Foto del pasaporte actualizada')
+      setTimeout(() => setPassportMsg(''), 1800)
+    } catch (err) {
+      setPassportError('No se pudo subir la foto. Revisa que el campo avatar_url exista en Supabase.')
+    }
+
+    setPassportUploading(false)
+  }
+
   return (
     <div style={C.page}>
       <div style={C.header}>
@@ -388,7 +457,7 @@ export default function Kids() {
               </div>
             )}
 
-            <button style={C.passportBtn} onClick={() => setSelectedPassport(kid)}>
+            <button style={C.passportBtn} onClick={() => openPassport(kid)}>
               Ver Pasaporte
             </button>
             <button style={C.wishlistBtn} onClick={() => router.push('/wishlist')}>Ver Wishlist</button>
@@ -412,12 +481,41 @@ export default function Kids() {
             </div>
 
             <p style={C.sectionTitle}>PERFIL DEL PEQUE</p>
+            {passportMsg && <div style={C.success}>{passportMsg}</div>}
+            {passportError && <p style={C.err}>{passportError}</p>}
             <div style={C.passportHero}>
-              <div style={C.passportAvatar}>{getAvatarIcon(selectedPassport.avatar)}</div>
+              <div style={C.passportPhotoWrap}>
+                <div
+                  style={C.passportAvatar}
+                  onClick={() => !passportUploading && passportFileInputRef.current?.click()}
+                  title="Cambiar foto del pasaporte"
+                >
+                  {getPassportImage(selectedPassport)
+                    ? <img src={getPassportImage(selectedPassport)} alt={`Foto de ${selectedPassport.nickname}`} style={C.passportAvatarImg} />
+                    : getAvatarIcon(selectedPassport.avatar)}
+                  <span style={C.passportCameraBadge}>{passportUploading ? '...' : '📷'}</span>
+                </div>
+                <button
+                  type="button"
+                  style={C.passportPhotoBtn}
+                  onClick={() => !passportUploading && passportFileInputRef.current?.click()}
+                  disabled={passportUploading}
+                >
+                  {passportUploading ? 'Subiendo...' : 'Cambiar foto'}
+                </button>
+                <input
+                  ref={passportFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display:'none' }}
+                  onChange={handlePassportPhotoUpload}
+                />
+              </div>
               <div style={{ minWidth:0 }}>
                 <p style={C.passportName}>{selectedPassport.nickname}</p>
                 <p style={C.passportMeta}>{calculateAge(selectedPassport.birth_date)} años</p>
                 <p style={C.passportMeta}>{getBirthdayCountdown(selectedPassport.birth_date)}</p>
+                <p style={C.passportPhotoHint}>Toca la foto o el botón para actualizar la imagen del pasaporte.</p>
               </div>
             </div>
 
