@@ -56,6 +56,9 @@ const C = {
   saveBtnDisabled: { padding:'12px', borderRadius:14, border:'none', background:'rgba(255,255,255,0.11)', color:'rgba(255,255,255,0.32)', fontSize:13, fontWeight:900, cursor:'not-allowed', fontFamily:"'Nunito',sans-serif" },
   uploadBox: { border:'1.5px dashed rgba(170,235,58,0.42)', background:'rgba(170,235,58,0.07)', borderRadius:16, padding:16, textAlign:'center', color:'white', marginBottom:12 },
   uploadPreview: { width:'100%', maxHeight:220, objectFit:'cover', borderRadius:14, border:'1px solid rgba(255,255,255,0.12)', marginBottom:10 },
+  detectionBox: { border:'1px solid rgba(255,216,77,0.26)', background:'rgba(255,216,77,0.08)', borderRadius:12, padding:'10px 12px', marginBottom:12, textAlign:'left' },
+  detectionTitle: { color:'#FFD84D', fontSize:11, fontWeight:900, letterSpacing:.6, marginBottom:5 },
+  detectionText: { color:'rgba(255,255,255,0.72)', fontSize:12, lineHeight:1.35 },
   success: { background:'rgba(170,235,58,0.13)', border:'1px solid rgba(170,235,58,0.42)', color:'#AAEB3A', borderRadius:12, padding:'10px 12px', fontSize:12, fontWeight:800, marginBottom:12, lineHeight:1.35 },
   err: { color:'#ff6666', fontSize:12, marginBottom:10, lineHeight:1.35 },
   sectionTitle: { fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.35)', letterSpacing:1, margin:'2px 0 10px' },
@@ -128,6 +131,43 @@ function isRavUrl(url) {
   }
 }
 
+function parseDetectedPrice(text) {
+  const matches = text.match(/(?:\$|cop)?\s?(\d{1,3}(?:[.,]\d{3})+|\d{4,7})(?:\s?cop)?/gi) || []
+  const prices = matches
+    .map(match => Number(match.replace(/[^\d]/g, '')))
+    .filter(value => value >= 1000 && value <= 5000000)
+  return prices[0] || null
+}
+
+function parseDetectedTitle(text) {
+  const lines = text
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => !/\$|cop|precio|total|iva|ref|sku|cod/i.test(line))
+    .filter(line => /[a-záéíóúñ]/i.test(line))
+    .filter(line => line.length >= 4 && line.length <= 70)
+
+  return lines.sort((a, b) => b.length - a.length)[0] || ''
+}
+
+async function detectTextFromImage(file) {
+  if (typeof window === 'undefined' || !window.TextDetector || !window.createImageBitmap) {
+    return { supported:false, text:'', detected_title:'', detected_price:null }
+  }
+
+  const detector = new window.TextDetector()
+  const bitmap = await window.createImageBitmap(file)
+  const results = await detector.detect(bitmap)
+  const text = results.map(item => item.rawValue || '').filter(Boolean).join('\n')
+  return {
+    supported:true,
+    text,
+    detected_title: parseDetectedTitle(text),
+    detected_price: parseDetectedPrice(text),
+  }
+}
+
 export default function Wishlist() {
   const [userId, setUserId] = useState('')
   const [kids, setKids] = useState([])
@@ -141,6 +181,8 @@ export default function Wishlist() {
   const [ravLink, setRavLink] = useState('')
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState('')
+  const [photoDetecting, setPhotoDetecting] = useState(false)
+  const [photoDetection, setPhotoDetection] = useState({ supported:false, tried:false, title:'', price:null })
   const [showManual, setShowManual] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -187,6 +229,8 @@ export default function Wishlist() {
     setRavLink('')
     setPhotoFile(null)
     setPhotoPreview('')
+    setPhotoDetecting(false)
+    setPhotoDetection({ supported:false, tried:false, title:'', price:null })
     setShowManual(false)
     setManualForm(blankManualForm)
     setEditingId('')
@@ -281,7 +325,9 @@ export default function Wishlist() {
       const { error: insertError } = await supabase.from('wishlist_items').insert({
         user_id: userId,
         child_id: selectedChildId || null,
-        title: 'Juguete pendiente por confirmar',
+        title: photoDetection.title || 'Juguete pendiente por confirmar',
+        detected_title: photoDetection.title || null,
+        detected_price: photoDetection.price || null,
         uploaded_image_url: uploadedUrl,
         status: 'wanted',
         source: 'photo',
@@ -341,12 +387,27 @@ export default function Wishlist() {
     setSaving(false)
   }
 
-  const choosePhoto = (file) => {
+  const choosePhoto = async (file) => {
     if (!file) return
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
+    setPhotoDetection({ supported:false, tried:false, title:'', price:null })
     setError('')
+
+    setPhotoDetecting(true)
+    try {
+      const result = await detectTextFromImage(file)
+      setPhotoDetection({
+        supported: result.supported,
+        tried: true,
+        title: result.detected_title || '',
+        price: result.detected_price || null,
+      })
+    } catch {
+      setPhotoDetection({ supported:true, tried:true, title:'', price:null })
+    }
+    setPhotoDetecting(false)
   }
 
   const updateStatus = async (item, status) => {
@@ -459,6 +520,16 @@ export default function Wishlist() {
                       <p style={{ fontWeight:900, marginTop:8 }}>{photoPreview ? 'Foto lista' : 'Tomar o subir foto'}</p>
                       <p style={C.helper}>Guardaremos la imagen para que RAV confirme el juguete y el precio.</p>
                     </button>
+                    {photoPreview && (
+                      <div style={C.detectionBox}>
+                        <p style={C.detectionTitle}>LECTURA DE IMAGEN</p>
+                        {photoDetecting && <p style={C.detectionText}>Intentando leer nombre y precio...</p>}
+                        {!photoDetecting && photoDetection.tried && !photoDetection.supported && <p style={C.detectionText}>Este navegador no permite leer texto de la imagen todavía. Guardaremos la foto para que RAV lo confirme.</p>}
+                        {!photoDetecting && photoDetection.tried && photoDetection.supported && !photoDetection.title && !photoDetection.price && <p style={C.detectionText}>No se detectó texto claro. RAV confirmará el juguete y el precio.</p>}
+                        {!photoDetecting && !!photoDetection.title && <p style={C.detectionText}>Nombre estimado: <strong>{photoDetection.title}</strong></p>}
+                        {!photoDetecting && !!photoDetection.price && <p style={C.detectionText}>Precio estimado: <strong>{formatPrice(photoDetection.price)}</strong></p>}
+                      </div>
+                    )}
                     <div style={C.flowActions}>
                       <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
                       <button style={photoFile ? C.saveBtn : C.saveBtnDisabled} onClick={savePhotoItem} disabled={!photoFile || saving}>{saving ? 'Guardando...' : 'Guardar foto'}</button>
