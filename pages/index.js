@@ -401,7 +401,7 @@ export default function Welcome() {
 
         <h1 className={animateReady ? 'enter enter-3' : ''} style={C.wordmark}>RAV Club</h1>
         <p className={animateReady ? 'enter enter-4' : ''} style={C.subtitle}>
-          {mode === 'login' ? 'Tu pasaporte al universo RAV' : 'Únete al universo RAV'}
+          {mode === 'login' ? 'Tu pasaporte al RAV Universo' : 'Únete al RAV Universo'}
         </p>
 
         <div className={animateReady ? 'enter enter-5' : ''} style={C.form}>
