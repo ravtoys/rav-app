@@ -6,6 +6,10 @@ create table if not exists public.wishlist_items (
   image_url text null,
   price numeric null,
   product_url text null,
+  uploaded_image_url text null,
+  detected_price numeric null,
+  detected_title text null,
+  match_status text not null default 'manual_confirmed',
   status text not null default 'wanted',
   source text not null default 'manual',
   shopify_product_id text null,
@@ -14,12 +18,14 @@ create table if not exists public.wishlist_items (
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now(),
   constraint wishlist_items_status_check check (status in ('wanted', 'purchased', 'unavailable')),
+  constraint wishlist_items_match_status_check check (match_status in ('manual_confirmed', 'pending_confirmation', 'shopify_matched')),
   constraint wishlist_items_price_check check (price is null or price >= 0)
 );
 
 create index if not exists wishlist_items_user_id_idx on public.wishlist_items(user_id);
 create index if not exists wishlist_items_child_id_idx on public.wishlist_items(child_id);
 create index if not exists wishlist_items_status_idx on public.wishlist_items(status);
+create index if not exists wishlist_items_match_status_idx on public.wishlist_items(match_status);
 
 create or replace function public.set_wishlist_items_updated_at()
 returns trigger as $$
