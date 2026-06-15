@@ -44,6 +44,9 @@ const C = {
   kidsBox: { background:'rgba(43,63,191,0.12)', border:'1px solid rgba(43,63,191,0.35)', borderRadius:12, padding:'10px 12px', margin:'10px 0 12px' },
   kidsTitle: { fontSize:10, fontWeight:900, color:'rgba(170,235,58,0.7)', letterSpacing:1, marginBottom:8 },
   kidRow: { display:'flex', justifyContent:'space-between', gap:12, padding:'8px 0', borderTop:'1px solid rgba(255,255,255,0.07)' },
+  kidIdentity: { display:'flex', alignItems:'center', gap:9 },
+  kidPhoto: { width:34, height:34, borderRadius:12, objectFit:'cover', border:'1px solid rgba(170,235,58,0.45)', background:'rgba(170,235,58,0.12)', flexShrink:0 },
+  kidIconAvatar: { width:34, height:34, borderRadius:12, border:'1px solid rgba(170,235,58,0.28)', background:'rgba(170,235,58,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 },
   kidName: { fontSize:13, fontWeight:900, color:'white' },
   kidMeta: { fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:2 },
   kidCountdown: { fontSize:11, fontWeight:900, color:'#AAEB3A', textAlign:'right', whiteSpace:'nowrap' },
@@ -721,7 +724,12 @@ export default function Admin() {
               {user.children.map(child => (
                 <div key={child.id} style={C.kidRow}>
                   <div>
-                    <p style={C.kidName}>{getAvatarIcon(child.avatar)} {child.nickname}</p>
+                    <div style={C.kidIdentity}>
+                      {child.avatar_url
+                        ? <img src={child.avatar_url} alt={`Foto de ${child.nickname}`} style={C.kidPhoto} />
+                        : <span style={C.kidIconAvatar}>{getAvatarIcon(child.avatar)}</span>}
+                      <p style={C.kidName}>{child.nickname}</p>
+                    </div>
                     <p style={C.kidMeta}>
                       {calculateAge(child.birth_date)} años · {new Date(`${child.birth_date}T00:00:00`).toLocaleDateString('es-CO', { day:'numeric', month:'long' })}
                     </p>
