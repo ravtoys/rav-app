@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     const { data: childProfiles, error: childProfilesError } = await supabase
       .from('child_profiles')
-      .select('id, parent_id, nickname, birth_date, interests, avatar, consent_at, created_at')
+      .select('id, parent_id, nickname, birth_date, interests, avatar, avatar_url, consent_at, created_at')
       .order('birth_date', { ascending: true })
 
     if (childProfilesError) throw childProfilesError
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
     const { data: wishlistItemsData, error: wishlistItemsError } = await supabase
       .from('wishlist_items')
-      .select('id, user_id, child_id, title, image_url, price, product_url, status, source, created_at')
+      .select('id, user_id, child_id, title, image_url, uploaded_image_url, price, detected_price, detected_title, product_url, status, source, match_status, shopify_product_id, shopify_variant_id, sku, created_at')
       .order('created_at', { ascending: false })
 
     const wishlistItems = wishlistItemsError ? [] : (wishlistItemsData || [])
@@ -64,11 +64,16 @@ export default async function handler(req, res) {
     }, new Map())
 
     const childNameById = new Map((childProfiles || []).map((child) => [child.id, child.nickname]))
+    const profileById = new Map((profiles || []).map((profile) => [profile.id, profile]))
     const wishlistByUserId = wishlistItems.reduce((map, item) => {
       if (!map.has(item.user_id)) map.set(item.user_id, [])
+      const parent = profileById.get(item.user_id) || {}
       map.get(item.user_id).push({
         ...item,
         child_name: item.child_id ? childNameById.get(item.child_id) || 'Peque' : 'General',
+        parent_name: parent.full_name || 'Sin nombre',
+        parent_email: emailById.get(item.user_id) || '',
+        parent_phone: parent.phone || '',
       })
       return map
     }, new Map())
