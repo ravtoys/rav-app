@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
@@ -9,6 +9,21 @@ const STATUS_LABELS = {
   unavailable: 'Agotado',
 }
 
+const MATCH_LABELS = {
+  manual_confirmed: 'Confirmado manualmente',
+  pending_confirmation: 'RAV lo está confirmando',
+  shopify_matched: 'Confirmado por Shopify',
+}
+
+const blankManualForm = {
+  title: '',
+  image_url: '',
+  price: '',
+  product_url: '',
+  child_id: '',
+  status: 'wanted',
+}
+
 const C = {
   page: { minHeight:'100vh', background:'#080618', paddingBottom:92 },
   header: { background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', padding:'22px 20px 18px' },
@@ -16,26 +31,47 @@ const C = {
   title: { fontFamily:"'Exo 2',sans-serif", fontSize:24, fontWeight:900, color:'white', lineHeight:1.1 },
   sub: { fontSize:12, color:'rgba(255,255,255,0.58)', marginTop:8, lineHeight:1.45 },
   body: { padding:'14px 16px' },
-  panel: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:14, marginBottom:14 },
   topActions: { display:'flex', gap:10, alignItems:'center', marginBottom:14 },
   addBtn: { flex:1, padding:'14px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:14, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   cancelBtn: { padding:'13px 14px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  panel: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:14, marginBottom:14 },
+  flowPanel: { background:'linear-gradient(180deg,rgba(170,235,58,0.09),rgba(43,63,191,0.1))', border:'1px solid rgba(170,235,58,0.24)', borderRadius:16, padding:14, marginBottom:14 },
+  stepPill: { display:'inline-block', padding:'5px 9px', borderRadius:999, background:'rgba(170,235,58,0.14)', color:'#AAEB3A', border:'1px solid rgba(170,235,58,0.28)', fontSize:10, fontWeight:900, marginBottom:10 },
+  question: { color:'white', fontSize:18, fontWeight:900, lineHeight:1.15, marginBottom:12 },
+  helper: { color:'rgba(255,255,255,0.58)', fontSize:12, lineHeight:1.4, marginBottom:12 },
+  optionGrid: { display:'grid', gap:10 },
+  optionCard: { width:'100%', display:'flex', alignItems:'center', gap:12, textAlign:'left', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(8,6,24,0.58)', color:'white', borderRadius:14, padding:12, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  optionCardActive: { width:'100%', display:'flex', alignItems:'center', gap:12, textAlign:'left', border:'1.5px solid #AAEB3A', background:'rgba(170,235,58,0.12)', color:'white', borderRadius:14, padding:12, cursor:'pointer', fontFamily:"'Nunito',sans-serif", boxShadow:'0 0 18px rgba(170,235,58,0.12)' },
+  optionIcon: { width:42, height:42, borderRadius:14, background:'rgba(170,235,58,0.14)', display:'flex', alignItems:'center', justifyContent:'center', color:'#AAEB3A', flexShrink:0 },
+  optionTitle: { color:'white', fontSize:14, fontWeight:900, marginBottom:3 },
+  optionSub: { color:'rgba(255,255,255,0.52)', fontSize:12, lineHeight:1.25 },
+  secondaryOption: { width:'100%', display:'flex', alignItems:'center', gap:12, textAlign:'left', border:'1px dashed rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.025)', color:'rgba(255,255,255,0.72)', borderRadius:14, padding:12, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   label: { fontSize:10, color:'rgba(170,235,58,0.65)', fontWeight:900, letterSpacing:1, margin:'0 0 6px' },
   input: { width:'100%', padding:'12px 13px', borderRadius:12, border:'1px solid rgba(170,235,58,0.28)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginBottom:12 },
   select: { width:'100%', padding:'12px 13px', borderRadius:12, border:'1px solid rgba(170,235,58,0.28)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginBottom:12 },
   row: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 },
+  flowActions: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginTop:10 },
+  backBtn: { padding:'12px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.72)', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  saveBtn: { padding:'12px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  saveBtnDisabled: { padding:'12px', borderRadius:14, border:'none', background:'rgba(255,255,255,0.11)', color:'rgba(255,255,255,0.32)', fontSize:13, fontWeight:900, cursor:'not-allowed', fontFamily:"'Nunito',sans-serif" },
+  uploadBox: { border:'1.5px dashed rgba(170,235,58,0.42)', background:'rgba(170,235,58,0.07)', borderRadius:16, padding:16, textAlign:'center', color:'white', marginBottom:12 },
+  uploadPreview: { width:'100%', maxHeight:220, objectFit:'cover', borderRadius:14, border:'1px solid rgba(255,255,255,0.12)', marginBottom:10 },
+  success: { background:'rgba(170,235,58,0.13)', border:'1px solid rgba(170,235,58,0.42)', color:'#AAEB3A', borderRadius:12, padding:'10px 12px', fontSize:12, fontWeight:800, marginBottom:12, lineHeight:1.35 },
+  err: { color:'#ff6666', fontSize:12, marginBottom:10, lineHeight:1.35 },
   sectionTitle: { fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.35)', letterSpacing:1, margin:'2px 0 10px' },
-  err: { color:'#ff6666', fontSize:12, marginBottom:10 },
   empty: { textAlign:'center', padding:'34px 18px', color:'rgba(255,255,255,0.42)', fontSize:13, lineHeight:1.45 },
   card: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.18)', borderRadius:14, padding:12, marginBottom:10 },
+  cardPending: { background:'linear-gradient(180deg,rgba(43,63,191,0.18),rgba(170,235,58,0.06))', border:'1px solid rgba(170,235,58,0.26)', borderRadius:14, padding:12, marginBottom:10 },
   cardTop: { display:'flex', gap:12, alignItems:'flex-start' },
   image: { width:76, height:76, borderRadius:14, objectFit:'cover', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', flexShrink:0 },
-  imageFallback: { width:76, height:76, borderRadius:14, background:'rgba(170,235,58,0.12)', border:'1px solid rgba(170,235,58,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, flexShrink:0 },
+  imageFallback: { width:76, height:76, borderRadius:14, background:'rgba(170,235,58,0.12)', border:'1px solid rgba(170,235,58,0.25)', display:'flex', alignItems:'center', justifyContent:'center', color:'#AAEB3A', flexShrink:0 },
   cardInfo: { flex:1, minWidth:0 },
   toyTitle: { color:'white', fontSize:15, fontWeight:900, lineHeight:1.15 },
   meta: { color:'rgba(255,255,255,0.48)', fontSize:11, marginTop:5 },
   price: { color:'#AAEB3A', fontSize:13, fontWeight:900, marginTop:7 },
+  estimatedPrice: { color:'#FFD84D', fontSize:12, fontWeight:900, marginTop:7 },
   badge: { display:'inline-block', padding:'5px 8px', borderRadius:12, background:'rgba(43,63,191,0.42)', border:'1px solid rgba(170,235,58,0.22)', color:'#AAEB3A', fontSize:10, fontWeight:900, marginTop:8 },
+  pendingMsg: { color:'rgba(255,255,255,0.56)', fontSize:11, lineHeight:1.35, marginTop:7 },
   link: { display:'inline-block', color:'#AAEB3A', fontSize:11, fontWeight:900, marginTop:8, textDecoration:'none' },
   controls: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 },
   statusSelect: { width:'100%', padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'#14102c', color:'white', fontSize:12, fontWeight:800, fontFamily:"'Nunito',sans-serif", outline:'none' },
@@ -43,13 +79,15 @@ const C = {
   deleteBtn: { padding:'10px', borderRadius:12, border:'1px solid rgba(255,100,100,0.25)', background:'rgba(200,30,30,0.08)', color:'#ff6666', fontSize:12, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
 }
 
-const blankForm = {
-  title: '',
-  image_url: '',
-  price: '',
-  product_url: '',
-  child_id: '',
-  status: 'wanted',
+function Icon({ type, size = 22, color = 'currentColor' }) {
+  const common = { width:size, height:size, viewBox:'0 0 24 24', fill:'none', 'aria-hidden':'true' }
+  if (type === 'gift') return <svg {...common}><path d="M5 10h14v10H5V10Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><path d="M12 10v10M5 14h14M8.5 10C6.8 8.7 6.7 6 8.7 6c1.7 0 2.6 2 3.3 4 .7-2 1.6-4 3.3-4 2 0 1.9 2.7.2 4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  if (type === 'link') return <svg {...common}><path d="M9.5 14.5 14.5 9.5M10.5 7.5l1.1-1.1a4 4 0 0 1 5.7 5.7l-1.1 1.1M13.5 16.5l-1.1 1.1a4 4 0 0 1-5.7-5.7l1.1-1.1" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
+  if (type === 'camera') return <svg {...common}><path d="M5 8h3l1.4-2h5.2L16 8h3v10H5V8Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="12" cy="13" r="3" stroke={color} strokeWidth="1.8"/></svg>
+  if (type === 'edit') return <svg {...common}><path d="M5 19h4l10-10-4-4L5 15v4Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><path d="m13.5 6.5 4 4" stroke={color} strokeWidth="1.8"/></svg>
+  if (type === 'plus') return <svg {...common}><path d="M12 5v14M5 12h14" stroke={color} strokeWidth="2" strokeLinecap="round"/></svg>
+  if (type === 'child') return <svg {...common}><circle cx="12" cy="10" r="4" stroke={color} strokeWidth="1.8"/><path d="M5.5 20c1.1-3.3 3.3-5 6.5-5s5.4 1.7 6.5 5" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
+  return <svg {...common}><circle cx="12" cy="12" r="7" stroke={color} strokeWidth="1.8"/></svg>
 }
 
 function formatPrice(price) {
@@ -62,16 +100,53 @@ function getAssignedName(item, kids) {
   return kids.find(kid => kid.id === item.child_id)?.nickname || 'Peque'
 }
 
+function extractTitleFromRavUrl(url) {
+  try {
+    const parsed = new URL(url.trim())
+    const host = parsed.hostname.replace(/^www\./, '')
+    if (host !== 'ravtoys.com') return ''
+    const parts = parsed.pathname.split('/').filter(Boolean)
+    const slug = parts[parts.length - 1] || ''
+    if (!slug) return ''
+    return slug
+      .replace(/-\d+$/g, '')
+      .split('-')
+      .filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  } catch {
+    return ''
+  }
+}
+
+function isRavUrl(url) {
+  try {
+    const parsed = new URL(url.trim())
+    return parsed.hostname.replace(/^www\./, '') === 'ravtoys.com'
+  } catch {
+    return false
+  }
+}
+
 export default function Wishlist() {
   const [userId, setUserId] = useState('')
   const [kids, setKids] = useState([])
   const [items, setItems] = useState([])
-  const [form, setForm] = useState(blankForm)
+  const [manualForm, setManualForm] = useState(blankManualForm)
   const [editingId, setEditingId] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [showFlow, setShowFlow] = useState(false)
+  const [flowStep, setFlowStep] = useState(1)
+  const [selectedChildId, setSelectedChildId] = useState('')
+  const [addMethod, setAddMethod] = useState('')
+  const [ravLink, setRavLink] = useState('')
+  const [photoFile, setPhotoFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState('')
+  const [showManual, setShowManual] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const photoInputRef = useRef(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -103,22 +178,35 @@ export default function Wishlist() {
     setItems(data || [])
   }
 
-  const resetForm = () => {
-    setForm(blankForm)
+  const resetFlow = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    setShowFlow(false)
+    setFlowStep(1)
+    setSelectedChildId('')
+    setAddMethod('')
+    setRavLink('')
+    setPhotoFile(null)
+    setPhotoPreview('')
+    setShowManual(false)
+    setManualForm(blankManualForm)
     setEditingId('')
-    setShowForm(false)
     setError('')
   }
 
   const startAdd = () => {
-    setForm(blankForm)
-    setEditingId('')
+    resetFlow()
+    setMessage('')
+    setShowFlow(true)
+  }
+
+  const chooseChild = (childId) => {
+    setSelectedChildId(childId)
+    setFlowStep(2)
     setError('')
-    setShowForm(true)
   }
 
   const startEdit = (item) => {
-    setForm({
+    setManualForm({
       title: item.title || '',
       image_url: item.image_url || '',
       price: item.price ?? '',
@@ -126,24 +214,101 @@ export default function Wishlist() {
       child_id: item.child_id || '',
       status: item.status || 'wanted',
     })
+    setSelectedChildId(item.child_id || '')
     setEditingId(item.id)
+    setShowManual(true)
+    setShowFlow(true)
+    setFlowStep(2)
+    setAddMethod('manual')
     setError('')
-    setShowForm(true)
+    setMessage('')
     window.scrollTo({ top: 0, behavior:'smooth' })
   }
 
-  const saveItem = async () => {
-    if (!form.title.trim()) {
+  const uploadWishlistPhoto = async (file) => {
+    if (!file) return ''
+    if (file.size > 3 * 1024 * 1024) throw new Error('La foto debe pesar menos de 3MB')
+    if (!file.type.startsWith('image/')) throw new Error('Elige una imagen válida')
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `${userId}/wishlist/${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { cacheControl:'3600', upsert:true })
+    if (uploadError) throw uploadError
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    return data.publicUrl
+  }
+
+  const saveRavLink = async () => {
+    if (!isRavUrl(ravLink)) {
+      setError('Pega un link válido de ravtoys.com')
+      return
+    }
+    setSaving(true)
+    setError('')
+    const detectedTitle = extractTitleFromRavUrl(ravLink)
+    const title = detectedTitle || 'Juguete pendiente por confirmar'
+    const { error: insertError } = await supabase.from('wishlist_items').insert({
+      user_id: userId,
+      child_id: selectedChildId || null,
+      title,
+      detected_title: detectedTitle || null,
+      product_url: ravLink.trim(),
+      status: 'wanted',
+      source: 'rav_link',
+      match_status: 'pending_confirmation',
+      updated_at: new Date().toISOString(),
+    })
+
+    if (insertError) setError('No se pudo guardar. Revisa que Supabase tenga las nuevas columnas de Wishlist.')
+    else {
+      resetFlow()
+      setMessage('RAV confirmará este juguete antes de compartirlo.')
+      await loadItems()
+    }
+    setSaving(false)
+  }
+
+  const savePhotoItem = async () => {
+    if (!photoFile) {
+      setError('Elige o toma una foto del juguete.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const uploadedUrl = await uploadWishlistPhoto(photoFile)
+      const { error: insertError } = await supabase.from('wishlist_items').insert({
+        user_id: userId,
+        child_id: selectedChildId || null,
+        title: 'Juguete pendiente por confirmar',
+        uploaded_image_url: uploadedUrl,
+        status: 'wanted',
+        source: 'photo',
+        match_status: 'pending_confirmation',
+        updated_at: new Date().toISOString(),
+      })
+      if (insertError) throw insertError
+      resetFlow()
+      setMessage('Listo. Guardamos la foto y RAV confirmará el juguete y el precio.')
+      await loadItems()
+    } catch (err) {
+      if (err?.message?.includes('3MB') || err?.message?.includes('imagen válida')) setError(err.message)
+      else setError('No se pudo guardar la foto. Revisa Storage y las nuevas columnas de Wishlist.')
+    }
+    setSaving(false)
+  }
+
+  const saveManualItem = async () => {
+    if (!manualForm.title.trim()) {
       setError('El nombre del juguete es obligatorio')
       return
     }
-
-    if (form.child_id && !kids.some(kid => kid.id === form.child_id)) {
+    if (manualForm.child_id && !kids.some(kid => kid.id === manualForm.child_id)) {
       setError('Ese peque no pertenece a tu cuenta')
       return
     }
-
-    const cleanPrice = form.price === '' ? null : Number(form.price)
+    const cleanPrice = manualForm.price === '' ? null : Number(manualForm.price)
     if (cleanPrice !== null && (Number.isNaN(cleanPrice) || cleanPrice < 0)) {
       setError('El precio debe ser un número válido')
       return
@@ -151,16 +316,16 @@ export default function Wishlist() {
 
     setSaving(true)
     setError('')
-
     const payload = {
       user_id: userId,
-      child_id: form.child_id || null,
-      title: form.title.trim(),
-      image_url: form.image_url.trim() || null,
+      child_id: manualForm.child_id || null,
+      title: manualForm.title.trim(),
+      image_url: manualForm.image_url.trim() || null,
       price: cleanPrice,
-      product_url: form.product_url.trim() || null,
-      status: form.status,
+      product_url: manualForm.product_url.trim() || null,
+      status: manualForm.status,
       source: 'manual',
+      match_status: 'manual_confirmed',
       updated_at: new Date().toISOString(),
     }
 
@@ -168,14 +333,20 @@ export default function Wishlist() {
       ? await supabase.from('wishlist_items').update(payload).eq('id', editingId).eq('user_id', userId)
       : await supabase.from('wishlist_items').insert(payload)
 
-    if (result.error) {
-      setError('No se pudo guardar. Intenta de nuevo.')
-    } else {
-      resetForm()
+    if (result.error) setError('No se pudo guardar. Intenta de nuevo.')
+    else {
+      resetFlow()
       await loadItems()
     }
-
     setSaving(false)
+  }
+
+  const choosePhoto = (file) => {
+    if (!file) return
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+    setError('')
   }
 
   const updateStatus = async (item, status) => {
@@ -185,9 +356,7 @@ export default function Wishlist() {
       .eq('id', item.id)
       .eq('user_id', userId)
 
-    if (!error) {
-      setItems(prev => prev.map(current => current.id === item.id ? { ...current, status } : current))
-    }
+    if (!error) setItems(prev => prev.map(current => current.id === item.id ? { ...current, status } : current))
   }
 
   const deleteItem = async (item) => {
@@ -203,6 +372,8 @@ export default function Wishlist() {
     else setItems(prev => prev.filter(current => current.id !== item.id))
   }
 
+  const selectedChildName = selectedChildId ? kids.find(kid => kid.id === selectedChildId)?.nickname : 'General'
+
   return (
     <div style={C.page}>
       <div style={C.header}>
@@ -214,77 +385,128 @@ export default function Wishlist() {
       <div style={C.body}>
         <div style={C.topActions}>
           <button style={C.addBtn} onClick={startAdd}>Agregar juguete</button>
-          {showForm && <button style={C.cancelBtn} onClick={resetForm}>Cancelar</button>}
+          {showFlow && <button style={C.cancelBtn} onClick={resetFlow}>Cancelar</button>}
         </div>
 
-        {showForm && (
-          <div style={C.panel}>
-            <p style={C.sectionTitle}>{editingId ? 'EDITAR JUGUETE' : 'NUEVO JUGUETE'}</p>
+        {message && <div style={C.success}>{message}</div>}
+        {error && !showFlow && <p style={C.err}>{error}</p>}
+
+        {showFlow && (
+          <div style={C.flowPanel}>
             {error && <p style={C.err}>{error}</p>}
 
-            <label style={C.label}>NOMBRE DEL JUGUETE</label>
-            <input
-              style={C.input}
-              placeholder="Ej: LEGO, Barbie, dinosaurio..."
-              value={form.title}
-              onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
-            />
+            {flowStep === 1 && (
+              <>
+                <span style={C.stepPill}>PASO 1</span>
+                <p style={C.question}>¿Para quién es este regalo?</p>
+                <div style={C.optionGrid}>
+                  <button style={selectedChildId === '' ? C.optionCardActive : C.optionCard} onClick={() => chooseChild('')}>
+                    <span style={C.optionIcon}><Icon type="gift" /></span>
+                    <span><span style={C.optionTitle}>General</span><span style={C.optionSub}>Para la wishlist familiar.</span></span>
+                  </button>
+                  {kids.map(kid => (
+                    <button key={kid.id} style={selectedChildId === kid.id ? C.optionCardActive : C.optionCard} onClick={() => chooseChild(kid.id)}>
+                      <span style={C.optionIcon}><Icon type="child" /></span>
+                      <span><span style={C.optionTitle}>{kid.nickname}</span><span style={C.optionSub}>Guardar para este peque.</span></span>
+                    </button>
+                  ))}
+                  <button style={C.secondaryOption} onClick={() => router.push('/kids')}>
+                    <span style={C.optionIcon}><Icon type="plus" /></span>
+                    <span><span style={C.optionTitle}>Agregar peque</span><span style={C.optionSub}>Crea un perfil antes de guardar el regalo.</span></span>
+                  </button>
+                </div>
+              </>
+            )}
 
-            <label style={C.label}>IMAGEN URL OPCIONAL</label>
-            <input
-              style={C.input}
-              placeholder="https://..."
-              value={form.image_url}
-              onChange={e => setForm(prev => ({ ...prev, image_url: e.target.value }))}
-            />
+            {flowStep === 2 && (
+              <>
+                <span style={C.stepPill}>PASO 2 · {selectedChildName}</span>
+                <p style={C.question}>¿Qué juguete quieres guardar?</p>
+                <p style={C.helper}>Elige la forma más rápida. RAV lo confirmará después.</p>
 
-            <div style={C.row}>
-              <div>
-                <label style={C.label}>PRECIO OPCIONAL</label>
-                <input
-                  style={C.input}
-                  type="number"
-                  min="0"
-                  placeholder="Ej: 120000"
-                  value={form.price}
-                  onChange={e => setForm(prev => ({ ...prev, price: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label style={C.label}>ESTADO</label>
-                <select
-                  style={C.select}
-                  value={form.status}
-                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))}
-                >
-                  <option value="wanted">Deseado</option>
-                  <option value="purchased">Comprado</option>
-                  <option value="unavailable">Agotado</option>
-                </select>
-              </div>
-            </div>
+                <div style={C.optionGrid}>
+                  <button style={addMethod === 'rav_link' ? C.optionCardActive : C.optionCard} onClick={() => setAddMethod('rav_link')}>
+                    <span style={C.optionIcon}><Icon type="link" /></span>
+                    <span><span style={C.optionTitle}>Pegar link de RAV</span><span style={C.optionSub}>Pega el link del juguete en ravtoys.com.</span></span>
+                  </button>
+                  <button style={addMethod === 'photo' ? C.optionCardActive : C.optionCard} onClick={() => { setAddMethod('photo'); photoInputRef.current?.click() }}>
+                    <span style={C.optionIcon}><Icon type="camera" /></span>
+                    <span><span style={C.optionTitle}>Tomar foto en tienda</span><span style={C.optionSub}>Tómale una foto al juguete o a la etiqueta y RAV lo confirmará.</span></span>
+                  </button>
+                  <button style={addMethod === 'manual' ? C.secondaryOption : C.secondaryOption} onClick={() => { setAddMethod('manual'); setShowManual(true); setManualForm(prev => ({ ...prev, child_id:selectedChildId })) }}>
+                    <span style={C.optionIcon}><Icon type="edit" /></span>
+                    <span><span style={C.optionTitle}>Agregar manualmente</span><span style={C.optionSub}>Solo pruebas internas.</span></span>
+                  </button>
+                </div>
 
-            <label style={C.label}>PRODUCTO URL OPCIONAL</label>
-            <input
-              style={C.input}
-              placeholder="https://..."
-              value={form.product_url}
-              onChange={e => setForm(prev => ({ ...prev, product_url: e.target.value }))}
-            />
+                {addMethod === 'rav_link' && (
+                  <div style={{ marginTop:14 }}>
+                    <label style={C.label}>LINK DE RAVTOYS.COM</label>
+                    <input style={C.input} placeholder="https://ravtoys.com/products/..." value={ravLink} onChange={e => setRavLink(e.target.value)} />
+                    <p style={C.helper}>RAV confirmará este juguete antes de compartirlo.</p>
+                    <div style={C.flowActions}>
+                      <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
+                      <button style={ravLink.trim() ? C.saveBtn : C.saveBtnDisabled} onClick={saveRavLink} disabled={!ravLink.trim() || saving}>{saving ? 'Guardando...' : 'Guardar link'}</button>
+                    </div>
+                  </div>
+                )}
 
-            <label style={C.label}>ASIGNAR A</label>
-            <select
-              style={C.select}
-              value={form.child_id}
-              onChange={e => setForm(prev => ({ ...prev, child_id: e.target.value }))}
-            >
-              <option value="">General</option>
-              {kids.map(kid => <option key={kid.id} value={kid.id}>{kid.nickname}</option>)}
-            </select>
+                {addMethod === 'photo' && (
+                  <div style={{ marginTop:14 }}>
+                    <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => choosePhoto(e.target.files?.[0])} />
+                    <button style={C.uploadBox} onClick={() => photoInputRef.current?.click()}>
+                      {photoPreview ? <img src={photoPreview} alt="Foto del juguete" style={C.uploadPreview} /> : <Icon type="camera" size={34} color="#AAEB3A" />}
+                      <p style={{ fontWeight:900, marginTop:8 }}>{photoPreview ? 'Foto lista' : 'Tomar o subir foto'}</p>
+                      <p style={C.helper}>Guardaremos la imagen para que RAV confirme el juguete y el precio.</p>
+                    </button>
+                    <div style={C.flowActions}>
+                      <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
+                      <button style={photoFile ? C.saveBtn : C.saveBtnDisabled} onClick={savePhotoItem} disabled={!photoFile || saving}>{saving ? 'Guardando...' : 'Guardar foto'}</button>
+                    </div>
+                  </div>
+                )}
 
-            <button style={C.addBtn} onClick={saveItem} disabled={saving}>
-              {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar juguete'}
-            </button>
+                {showManual && addMethod === 'manual' && (
+                  <div style={{ marginTop:14 }}>
+                    <p style={C.sectionTitle}>{editingId ? 'EDITAR · SOLO PRUEBAS INTERNAS' : 'MANUAL · SOLO PRUEBAS INTERNAS'}</p>
+                    <label style={C.label}>NOMBRE DEL JUGUETE</label>
+                    <input style={C.input} placeholder="Ej: LEGO, Barbie, dinosaurio..." value={manualForm.title} onChange={e => setManualForm(prev => ({ ...prev, title:e.target.value }))} />
+
+                    <label style={C.label}>IMAGEN URL OPCIONAL</label>
+                    <input style={C.input} placeholder="https://..." value={manualForm.image_url} onChange={e => setManualForm(prev => ({ ...prev, image_url:e.target.value }))} />
+
+                    <div style={C.row}>
+                      <div>
+                        <label style={C.label}>PRECIO OPCIONAL</label>
+                        <input style={C.input} type="number" min="0" placeholder="Ej: 120000" value={manualForm.price} onChange={e => setManualForm(prev => ({ ...prev, price:e.target.value }))} />
+                      </div>
+                      <div>
+                        <label style={C.label}>ESTADO</label>
+                        <select style={C.select} value={manualForm.status} onChange={e => setManualForm(prev => ({ ...prev, status:e.target.value }))}>
+                          <option value="wanted">Deseado</option>
+                          <option value="purchased">Comprado</option>
+                          <option value="unavailable">Agotado</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <label style={C.label}>PRODUCTO URL OPCIONAL</label>
+                    <input style={C.input} placeholder="https://..." value={manualForm.product_url} onChange={e => setManualForm(prev => ({ ...prev, product_url:e.target.value }))} />
+
+                    <label style={C.label}>ASIGNAR A</label>
+                    <select style={C.select} value={manualForm.child_id} onChange={e => setManualForm(prev => ({ ...prev, child_id:e.target.value }))}>
+                      <option value="">General</option>
+                      {kids.map(kid => <option key={kid.id} value={kid.id}>{kid.nickname}</option>)}
+                    </select>
+
+                    <div style={C.flowActions}>
+                      <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
+                      <button style={C.saveBtn} onClick={saveManualItem} disabled={saving}>{saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar prueba'}</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -293,52 +515,55 @@ export default function Wishlist() {
         {!loading && items.length === 0 && (
           <div style={C.panel}>
             <div style={C.empty}>
-              <p style={{ fontSize:36, marginBottom:8 }}>🎁</p>
+              <p style={{ marginBottom:8, color:'#AAEB3A' }}><Icon type="gift" size={40} color="#AAEB3A" /></p>
               <p>Aún no hay juguetes guardados.</p>
-              <p style={{ color:'rgba(170,235,58,0.55)', marginTop:4 }}>Agrega el primero para empezar la lista mágica.</p>
+              <p style={{ color:'rgba(170,235,58,0.55)', marginTop:4 }}>Agrega el primero en segundos.</p>
             </div>
           </div>
         )}
 
-        {items.map(item => (
-          <div key={item.id} style={C.card}>
-            <div style={C.cardTop}>
-              {item.image_url ? (
-                <img
-                  style={C.image}
-                  src={item.image_url}
-                  alt={item.title}
-                  onError={e => { e.currentTarget.style.display = 'none' }}
-                />
-              ) : (
-                <div style={C.imageFallback}>🎁</div>
-              )}
-              <div style={C.cardInfo}>
-                <p style={C.toyTitle}>{item.title}</p>
-                <p style={C.meta}>{getAssignedName(item, kids)}</p>
-                {item.price !== null && item.price !== undefined && <p style={C.price}>{formatPrice(item.price)}</p>}
-                <span style={C.badge}>{STATUS_LABELS[item.status] || 'Deseado'}</span>
-                {item.product_url && (
-                  <a style={C.link} href={item.product_url} target="_blank" rel="noreferrer">Ver producto</a>
+        {items.map(item => {
+          const isPending = item.match_status === 'pending_confirmation'
+          const displayImage = item.uploaded_image_url || item.image_url
+          return (
+            <div key={item.id} style={isPending ? C.cardPending : C.card}>
+              <div style={C.cardTop}>
+                {displayImage ? (
+                  <img style={C.image} src={displayImage} alt={item.title} onError={e => { e.currentTarget.style.display = 'none' }} />
+                ) : (
+                  <div style={C.imageFallback}><Icon type={item.source === 'rav_link' ? 'link' : 'gift'} color="#AAEB3A" size={30} /></div>
                 )}
+                <div style={C.cardInfo}>
+                  <p style={C.toyTitle}>{item.detected_title || item.title}</p>
+                  <p style={C.meta}>{getAssignedName(item, kids)}</p>
+                  {isPending ? (
+                    <>
+                      <span style={C.badge}>{MATCH_LABELS[item.match_status]}</span>
+                      {item.detected_price !== null && item.detected_price !== undefined && <p style={C.estimatedPrice}>Precio estimado: {formatPrice(item.detected_price)}</p>}
+                      <p style={C.pendingMsg}>El precio oficial será confirmado por RAV.</p>
+                    </>
+                  ) : (
+                    <>
+                      {item.price !== null && item.price !== undefined && <p style={C.price}>{formatPrice(item.price)}</p>}
+                      <span style={C.badge}>{STATUS_LABELS[item.status] || 'Deseado'}</span>
+                    </>
+                  )}
+                  {item.product_url && <a style={C.link} href={item.product_url} target="_blank" rel="noreferrer">Ver producto</a>}
+                </div>
+              </div>
+
+              <div style={C.controls}>
+                <select style={C.statusSelect} value={item.status || 'wanted'} onChange={e => updateStatus(item, e.target.value)}>
+                  <option value="wanted">Deseado</option>
+                  <option value="purchased">Comprado</option>
+                  <option value="unavailable">Agotado</option>
+                </select>
+                <button style={C.smallBtn} onClick={() => startEdit(item)}>Editar</button>
+                <button style={C.deleteBtn} onClick={() => deleteItem(item)}>Eliminar</button>
               </div>
             </div>
-
-            <div style={C.controls}>
-              <select
-                style={C.statusSelect}
-                value={item.status || 'wanted'}
-                onChange={e => updateStatus(item, e.target.value)}
-              >
-                <option value="wanted">Deseado</option>
-                <option value="purchased">Comprado</option>
-                <option value="unavailable">Agotado</option>
-              </select>
-              <button style={C.smallBtn} onClick={() => startEdit(item)}>Editar</button>
-              <button style={C.deleteBtn} onClick={() => deleteItem(item)}>Eliminar</button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <Navbar active="wishlist" />
