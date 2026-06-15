@@ -56,6 +56,12 @@ const C = {
   avatarRow: { display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:14 },
   avatarBtn: { height:50, borderRadius:14, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'white', fontSize:23, cursor:'pointer' },
   avatarBtnActive: { height:50, borderRadius:14, border:'1.5px solid #AAEB3A', background:'rgba(170,235,58,0.16)', color:'white', fontSize:23, cursor:'pointer' },
+  editPhotoBox: { display:'flex', alignItems:'center', gap:12, border:'1px solid rgba(170,235,58,0.22)', background:'rgba(170,235,58,0.07)', borderRadius:14, padding:12, marginBottom:14 },
+  editPhotoPreview: { width:64, height:64, borderRadius:20, border:'1px solid rgba(170,235,58,0.42)', background:'rgba(170,235,58,0.12)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, overflow:'hidden', flexShrink:0 },
+  editPhotoImg: { width:'100%', height:'100%', objectFit:'cover' },
+  editPhotoTitle: { color:'white', fontSize:13, fontWeight:900, marginBottom:3 },
+  editPhotoText: { color:'rgba(255,255,255,0.48)', fontSize:11, lineHeight:1.35, marginBottom:8 },
+  editPhotoBtn: { border:'1px solid rgba(170,235,58,0.45)', background:'rgba(170,235,58,0.12)', color:'#AAEB3A', borderRadius:12, padding:'8px 11px', fontSize:12, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   btn: { width:'100%', padding:'14px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:14, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
   ghostBtn: { width:'100%', padding:'12px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif", marginTop:8 },
   err: { color:'#ff6666', fontSize:12, marginBottom:10 },
@@ -68,7 +74,8 @@ const C = {
   card: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.18)', borderRadius:14, padding:14, marginBottom:10 },
   cardTop: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:12 },
   cardLeft: { display:'flex', alignItems:'center', gap:12, minWidth:0 },
-  avatar: { width:48, height:48, borderRadius:16, background:'rgba(170,235,58,0.15)', border:'1px solid rgba(170,235,58,0.35)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:25, flexShrink:0 },
+  avatar: { width:48, height:48, borderRadius:16, background:'rgba(170,235,58,0.15)', border:'1px solid rgba(170,235,58,0.35)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:25, flexShrink:0, overflow:'hidden' },
+  avatarImg: { width:'100%', height:'100%', objectFit:'cover' },
   name: { color:'white', fontSize:15, fontWeight:900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
   meta: { color:'rgba(255,255,255,0.45)', fontSize:11, marginTop:3 },
   countdown: { color:'#AAEB3A', fontSize:11, fontWeight:900, textAlign:'right' },
@@ -161,6 +168,9 @@ export default function Kids() {
   const [passportMsg, setPassportMsg] = useState('')
   const [passportError, setPassportError] = useState('')
   const passportFileInputRef = useRef(null)
+  const editPhotoInputRef = useRef(null)
+  const [editPhotoUploading, setEditPhotoUploading] = useState(false)
+  const [editPhotoMsg, setEditPhotoMsg] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -198,6 +208,7 @@ export default function Kids() {
     setEditingId('')
     setKidsConsent(false)
     setError('')
+    setEditPhotoMsg('')
   }
 
   const startEdit = (kid) => {
@@ -209,6 +220,7 @@ export default function Kids() {
     })
     setEditingId(kid.id)
     setError('')
+    setEditPhotoMsg('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -298,49 +310,82 @@ export default function Kids() {
     setSelectedPassport(prev => prev?.id === kidId ? { ...prev, ...patch } : prev)
   }
 
+  const uploadChildPhoto = async (kidId, file) => {
+    if (file.size > 2 * 1024 * 1024) {
+      throw new Error('La imagen debe pesar menos de 2MB')
+    }
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Elige una imagen válida')
+    }
+
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/kids/${kidId}-${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { cacheControl: '3600', upsert: true })
+    if (uploadError) throw uploadError
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+    const publicUrl = urlData.publicUrl
+    const { error: dbError } = await supabase
+      .from('child_profiles')
+      .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+      .eq('id', kidId)
+      .eq('parent_id', userId)
+    if (dbError) throw dbError
+
+    updateKidEverywhere(kidId, { avatar_url: publicUrl })
+    return publicUrl
+  }
+
+  const getPhotoErrorMessage = (err) => {
+    const msg = err?.message || ''
+    if (msg.includes('2MB') || msg.includes('imagen válida')) return msg
+    if (msg.includes('avatar_url')) return 'No se pudo guardar la foto. Falta el campo avatar_url en Supabase.'
+    return 'No se pudo subir la foto. Intenta de nuevo.'
+  }
+
   const handlePassportPhotoUpload = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file || !selectedPassport) return
-    if (file.size > 2 * 1024 * 1024) {
-      setPassportError('La imagen debe pesar menos de 2MB')
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      setPassportError('Elige una imagen válida')
-      return
-    }
 
     setPassportUploading(true)
     setPassportError('')
     setPassportMsg('')
 
     try {
-      const ext = file.name.split('.').pop()
-      const path = `${userId}/kids/${selectedPassport.id}-${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { cacheControl: '3600', upsert: true })
-      if (uploadError) throw uploadError
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-      const publicUrl = urlData.publicUrl
-      const { error: dbError } = await supabase
-        .from('child_profiles')
-        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-        .eq('id', selectedPassport.id)
-        .eq('parent_id', userId)
-      if (dbError) throw dbError
-
-      updateKidEverywhere(selectedPassport.id, { avatar_url: publicUrl })
+      await uploadChildPhoto(selectedPassport.id, file)
       setPassportMsg('Foto del pasaporte actualizada')
       setTimeout(() => setPassportMsg(''), 1800)
     } catch (err) {
-      setPassportError('No se pudo subir la foto. Revisa que el campo avatar_url exista en Supabase.')
+      setPassportError(getPhotoErrorMessage(err))
     }
 
     setPassportUploading(false)
   }
+
+  const handleEditPhotoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !editingId) return
+
+    setEditPhotoUploading(true)
+    setEditPhotoMsg('')
+    setError('')
+
+    try {
+      await uploadChildPhoto(editingId, file)
+      setEditPhotoMsg('Foto actualizada')
+      setTimeout(() => setEditPhotoMsg(''), 1800)
+    } catch (err) {
+      setError(getPhotoErrorMessage(err))
+    }
+
+    setEditPhotoUploading(false)
+  }
+
+  const editingKid = editingId ? kids.find(kid => kid.id === editingId) : null
 
   return (
     <div style={C.page}>
@@ -362,6 +407,36 @@ export default function Kids() {
             value={form.nickname}
             onChange={e => setForm(prev => ({ ...prev, nickname: e.target.value }))}
           />
+
+          {editingKid && (
+            <div style={C.editPhotoBox}>
+              <div style={C.editPhotoPreview}>
+                {getPassportImage(editingKid)
+                  ? <img src={getPassportImage(editingKid)} alt={`Foto de ${editingKid.nickname}`} style={C.editPhotoImg} />
+                  : getAvatarIcon(editingKid.avatar)}
+              </div>
+              <div style={{ minWidth:0 }}>
+                <p style={C.editPhotoTitle}>Foto del peque</p>
+                <p style={C.editPhotoText}>Esta foto aparece en su perfil y en su Pasaporte RAV.</p>
+                {editPhotoMsg && <p style={{ ...C.editPhotoText, color:'#AAEB3A', fontWeight:900 }}>{editPhotoMsg}</p>}
+                <button
+                  type="button"
+                  style={C.editPhotoBtn}
+                  onClick={() => !editPhotoUploading && editPhotoInputRef.current?.click()}
+                  disabled={editPhotoUploading}
+                >
+                  {editPhotoUploading ? 'Subiendo...' : 'Cambiar foto'}
+                </button>
+                <input
+                  ref={editPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display:'none' }}
+                  onChange={handleEditPhotoUpload}
+                />
+              </div>
+            </div>
+          )}
 
           <div style={C.row}>
             <div>
@@ -442,7 +517,11 @@ export default function Kids() {
           <div key={kid.id} style={C.card}>
             <div style={C.cardTop}>
               <div style={C.cardLeft}>
-                <div style={C.avatar}>{getAvatarIcon(kid.avatar)}</div>
+                <div style={C.avatar}>
+                  {getPassportImage(kid)
+                    ? <img src={getPassportImage(kid)} alt={`Foto de ${kid.nickname}`} style={C.avatarImg} />
+                    : getAvatarIcon(kid.avatar)}
+                </div>
                 <div style={{ minWidth:0 }}>
                   <p style={C.name}>{kid.nickname}</p>
                   <p style={C.meta}>{calculateAge(kid.birth_date)} años · {new Date(`${kid.birth_date}T00:00:00`).toLocaleDateString('es-CO', { day:'numeric', month:'long' })}</p>
