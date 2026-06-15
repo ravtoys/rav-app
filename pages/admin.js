@@ -63,6 +63,12 @@ const C = {
   wishlistName: { color:'white', fontSize:12, fontWeight:900 },
   wishlistMeta: { color:'rgba(255,255,255,0.48)', fontSize:10, marginTop:3 },
   wishlistBadge: { display:'inline-block', padding:'4px 7px', borderRadius:10, background:'rgba(43,63,191,0.4)', border:'1px solid rgba(170,235,58,0.18)', color:'#AAEB3A', fontSize:10, fontWeight:900, whiteSpace:'nowrap' },
+  wishlistPendingBadge: { display:'inline-block', padding:'4px 7px', borderRadius:10, background:'rgba(255,216,77,0.1)', border:'1px solid rgba(255,216,77,0.28)', color:'#FFD84D', fontSize:10, fontWeight:900, whiteSpace:'nowrap' },
+  wishlistSource: { display:'inline-block', padding:'3px 7px', borderRadius:10, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.62)', fontSize:10, fontWeight:900, marginTop:5 },
+  wishlistThumb: { width:44, height:44, borderRadius:12, objectFit:'cover', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', flexShrink:0 },
+  wishlistFallback: { width:44, height:44, borderRadius:12, background:'rgba(170,235,58,0.1)', border:'1px solid rgba(170,235,58,0.22)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  wishlistLink: { display:'inline-block', color:'#AAEB3A', fontSize:10, fontWeight:900, marginTop:5, textDecoration:'none' },
+  wishlistNote: { color:'rgba(255,255,255,0.42)', fontSize:10, lineHeight:1.3, marginTop:5 },
   stampForm: { display:'grid', gridTemplateColumns:'1.3fr 70px 1.5fr auto', gap:8, marginTop:10 },
   stampSelect: { minWidth:120, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
   stampInput: { minWidth:0, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
@@ -167,6 +173,36 @@ function getWishlistStatusLabel(status) {
     unavailable: 'Agotado',
   }
   return labels[status] || 'Deseado'
+}
+
+function getWishlistMatchLabel(status) {
+  const labels = {
+    manual_confirmed: 'Manual confirmado',
+    pending_confirmation: 'Pendiente RAV',
+    shopify_matched: 'Shopify confirmado',
+  }
+  return labels[status] || 'Manual confirmado'
+}
+
+function getWishlistSourceLabel(source) {
+  const labels = {
+    rav_link: 'Link RAV',
+    photo: 'Foto en tienda',
+    manual: 'Manual',
+  }
+  return labels[source] || 'Manual'
+}
+
+function getWishlistDisplayTitle(item) {
+  return item.detected_title || item.title || 'Juguete pendiente por confirmar'
+}
+
+function getWishlistDisplayPrice(item) {
+  return item.detected_price ?? item.price
+}
+
+function getWishlistImage(item) {
+  return item.uploaded_image_url || item.image_url || ''
 }
 
 function formatPrice(price) {
@@ -336,8 +372,11 @@ export default function Admin() {
     (u.country || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.wishlist_items || []).some(item =>
       (item.title || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.detected_title || '').toLowerCase().includes(search.toLowerCase()) ||
       (item.child_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      getWishlistStatusLabel(item.status).toLowerCase().includes(search.toLowerCase())
+      getWishlistStatusLabel(item.status).toLowerCase().includes(search.toLowerCase()) ||
+      getWishlistMatchLabel(item.match_status).toLowerCase().includes(search.toLowerCase()) ||
+      getWishlistSourceLabel(item.source).toLowerCase().includes(search.toLowerCase())
     ) ||
     (u.children || []).some(child =>
       (child.nickname || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -420,6 +459,13 @@ export default function Admin() {
   const wishlistWanted = allWishlistItems.filter(item => item.status === 'wanted').length
   const wishlistPurchased = allWishlistItems.filter(item => item.status === 'purchased').length
   const wishlistUnavailable = allWishlistItems.filter(item => item.status === 'unavailable').length
+  const wishlistPending = allWishlistItems.filter(item => item.match_status === 'pending_confirmation').length
+  const wishlistShopifyMatched = allWishlistItems.filter(item => item.match_status === 'shopify_matched').length
+  const wishlistManualConfirmed = allWishlistItems.filter(item => !item.match_status || item.match_status === 'manual_confirmed').length
+  const pendingWishlistItems = [...allWishlistItems]
+    .filter(item => item.match_status === 'pending_confirmation')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 8)
   const recentWishlistItems = [...allWishlistItems]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 5)
@@ -481,6 +527,18 @@ export default function Admin() {
           <p style={C.statLabel}>JUGUETES GUARDADOS</p>
         </div>
         <div style={C.statCard}>
+          <p style={C.statNum}>{wishlistPending}</p>
+          <p style={C.statLabel}>PENDIENTES RAV</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{wishlistShopifyMatched}</p>
+          <p style={C.statLabel}>SHOPIFY CONFIRMADOS</p>
+        </div>
+        <div style={C.statCard}>
+          <p style={C.statNum}>{wishlistManualConfirmed}</p>
+          <p style={C.statLabel}>MANUALES</p>
+        </div>
+        <div style={C.statCard}>
           <p style={C.statNum}>{wishlistWanted}</p>
           <p style={C.statLabel}>DESEADOS</p>
         </div>
@@ -496,15 +554,56 @@ export default function Admin() {
 
       <div style={C.insightGrid}>
         <div style={C.insightPanel}>
+          <p style={C.insightTitle}>PENDIENTES POR CONFIRMAR</p>
+          {pendingWishlistItems.length === 0 && <p style={C.kidMeta}>No hay juguetes pendientes por confirmar.</p>}
+          {pendingWishlistItems.map(item => {
+            const image = getWishlistImage(item)
+            const displayPrice = getWishlistDisplayPrice(item)
+            return (
+              <div key={item.id} style={C.insightRow}>
+                <div style={{ display:'flex', gap:10, minWidth:0 }}>
+                  {image
+                    ? <img src={image} alt={getWishlistDisplayTitle(item)} style={C.wishlistThumb} />
+                    : <span style={C.wishlistFallback}>🎁</span>}
+                  <div>
+                    <p style={C.insightName}>{getWishlistDisplayTitle(item)}</p>
+                    <p style={C.insightMeta}>
+                      {item.parent_name || 'Sin nombre'} · {item.parent_email || 'Sin email'}
+                    </p>
+                    <p style={C.insightMeta}>
+                      Para: {item.child_name || 'General'} · {displayPrice ? `Precio estimado: ${formatPrice(displayPrice)}` : 'Sin precio estimado'}
+                    </p>
+                    <span style={C.wishlistSource}>{getWishlistSourceLabel(item.source)}</span>
+                    {item.product_url && (
+                      <a style={C.wishlistLink} href={item.product_url} target="_blank" rel="noopener noreferrer">Abrir producto</a>
+                    )}
+                    <p style={C.wishlistNote}>No es oficial hasta conectar Shopify.</p>
+                  </div>
+                </div>
+                <span style={C.wishlistPendingBadge}>{getWishlistMatchLabel(item.match_status)}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={C.insightPanel}>
           <p style={C.insightTitle}>ÚLTIMOS JUGUETES GUARDADOS</p>
           {recentWishlistItems.length === 0 && <p style={C.kidMeta}>Aún no hay juguetes en Wishlist.</p>}
           {recentWishlistItems.map(item => (
             <div key={item.id} style={C.insightRow}>
               <div>
-                <p style={C.insightName}>{item.title}</p>
-                <p style={C.insightMeta}>{item.child_name || 'General'} · {formatPrice(item.price) || 'Sin precio'}</p>
+                <p style={C.insightName}>{getWishlistDisplayTitle(item)}</p>
+                <p style={C.insightMeta}>
+                  {item.child_name || 'General'} · {formatPrice(getWishlistDisplayPrice(item)) || 'Sin precio'}
+                </p>
+                <span style={C.wishlistSource}>{getWishlistSourceLabel(item.source)}</span>
               </div>
-              <p style={C.insightValue}>{getWishlistStatusLabel(item.status)}</p>
+              <div style={{ textAlign:'right' }}>
+                <p style={C.insightValue}>{getWishlistStatusLabel(item.status)}</p>
+                <span style={item.match_status === 'pending_confirmation' ? C.wishlistPendingBadge : C.wishlistBadge}>
+                  {getWishlistMatchLabel(item.match_status)}
+                </span>
+              </div>
             </div>
           ))}
         </div>
@@ -702,17 +801,43 @@ export default function Admin() {
           {!!user.wishlist_items?.length && (
             <div style={C.wishlistPanel}>
               <p style={C.kidsTitle}>WISHLIST</p>
-              {user.wishlist_items.slice(0, 4).map(item => (
-                <div key={item.id} style={C.wishlistRow}>
-                  <div>
-                    <p style={C.wishlistName}>🎁 {item.title}</p>
-                    <p style={C.wishlistMeta}>
-                      {item.child_name || 'General'} · {formatPrice(item.price) || 'Sin precio'}
-                    </p>
+              {user.wishlist_items.slice(0, 4).map(item => {
+                const image = getWishlistImage(item)
+                const displayPrice = getWishlistDisplayPrice(item)
+                return (
+                  <div key={item.id} style={C.wishlistRow}>
+                    <div style={{ display:'flex', gap:9, minWidth:0 }}>
+                      {image
+                        ? <img src={image} alt={getWishlistDisplayTitle(item)} style={C.wishlistThumb} />
+                        : <span style={C.wishlistFallback}>🎁</span>}
+                      <div>
+                        <p style={C.wishlistName}>{getWishlistDisplayTitle(item)}</p>
+                        <p style={C.wishlistMeta}>
+                          {item.child_name || 'General'} · {formatPrice(displayPrice) || 'Sin precio'}
+                        </p>
+                        <p style={C.wishlistMeta}>
+                          {getWishlistSourceLabel(item.source)}
+                          {item.sku ? ` · SKU ${item.sku}` : ''}
+                        </p>
+                        {item.match_status === 'pending_confirmation' && (
+                          <p style={C.wishlistNote}>Pendiente de conectar/confirmar con catálogo.</p>
+                        )}
+                        {item.product_url && (
+                          <a style={C.wishlistLink} href={item.product_url} target="_blank" rel="noopener noreferrer">Abrir producto</a>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <span style={C.wishlistBadge}>{getWishlistStatusLabel(item.status)}</span>
+                      <div style={{ marginTop:5 }}>
+                        <span style={item.match_status === 'pending_confirmation' ? C.wishlistPendingBadge : C.wishlistBadge}>
+                          {getWishlistMatchLabel(item.match_status)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <span style={C.wishlistBadge}>{getWishlistStatusLabel(item.status)}</span>
-                </div>
-              ))}
+                )
+              })}
               {user.wishlist_items.length > 4 && (
                 <p style={C.wishlistMeta}>+{user.wishlist_items.length - 4} juguetes más</p>
               )}
