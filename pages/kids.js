@@ -406,7 +406,7 @@ export default function Kids() {
             <div style={C.passportTop}>
               <div>
                 <p style={C.passportTitle}>Pasaporte de {selectedPassport.nickname}</p>
-                <p style={C.passportSub}>Cada aventura, cumpleaños y sorpresa queda guardada en su universo RAV.</p>
+                <p style={C.passportSub}>Cada aventura, cumpleaños y sorpresa queda guardada en su RAV Universo.</p>
               </div>
               <button style={C.closeBtn} onClick={() => setSelectedPassport(null)}>×</button>
             </div>
