@@ -68,7 +68,7 @@ export default function ResetPassword() {
       <div style={C.card}>
         <div style={C.icon}>🚀</div>
         <h1 style={C.title}>Nueva contraseña</h1>
-        <p style={C.sub}>Crea una nueva contraseña para volver a entrar al universo RAV.</p>
+        <p style={C.sub}>Crea una nueva contraseña para volver a entrar al RAV Universo.</p>
 
         {!ready && !message && (
           <p style={C.err}>Abre esta pantalla desde el enlace que llegó a tu correo.</p>
