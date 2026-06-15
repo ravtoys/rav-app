@@ -97,7 +97,9 @@ function formatPoints(value) {
 }
 
 function formatDate(date) {
-  return new Date(date).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }).replace('.', '')
+  const value = new Date(date)
+  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+  return `${value.getDate()} ${months[value.getMonth()]} ${value.getFullYear()}`
 }
 
 function getEntryIcon(description, isSpend) {
