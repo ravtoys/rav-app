@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
@@ -28,21 +28,19 @@ const AVATARS = [
 ]
 
 const PASSPORT_STAMPS = [
-  { id:'first-trip', caption:'Primera visita', top:'PRIMERA MISIÓN', bottom:'BASE RAV', date:'01·25', color:'#3FA9F5', icon:'flag', automatic:true },
-  { id:'five-visits', caption:'5 visitas', top:'CINCO VISITAS', bottom:'BASE RAV', date:'02·25', color:'#2EE6A0', icon:'store' },
-  { id:'first-buy', caption:'Primera compra', top:'PRIMERA COMPRA', bottom:'BASE RAV', date:'03·25', color:'#FF6B3D', icon:'box' },
-  { id:'daily', caption:'Misión diaria', top:'MISIÓN DIARIA', bottom:'BASE RAV', date:'04·25', color:'#FFD84D', icon:'trophy' },
-  { id:'birthday', caption:'Cumpleaños', top:'CUMPLE RAV', bottom:'BASE RAV', date:'05·25', color:'#FF8FB0', icon:'cake' },
-  { id:'review', caption:'Reseña', top:'RESEÑA RAV', bottom:'BASE RAV', date:'06·25', color:'#BDF24A', icon:'spark' },
-  { id:'kid-month', caption:'Peque del mes', top:'PEQUE DEL MES', bottom:'BASE RAV', date:'07·25', color:'#8B7FE0', icon:'planet' },
-  { id:'ten-visits', caption:'10 visitas', top:'DIEZ VISITAS', bottom:'BASE RAV', date:'--·--', color:'#3FA9F5', icon:'store' },
-  { id:'deals', caption:'Caza-ofertas', top:'CAZA OFERTAS', bottom:'BASE RAV', date:'--·--', color:'#FF6B3D', icon:'tag' },
-  { id:'collector', caption:'Coleccionista', top:'COLECCIONISTA', bottom:'BASE RAV', date:'--·--', color:'#FFD84D', icon:'box' },
-  { id:'super-fan', caption:'Súper fan', top:'SÚPER FAN', bottom:'BASE RAV', date:'--·--', color:'#BDF24A', icon:'spark' },
-  { id:'legend', caption:'Leyenda peque', top:'LEYENDA PEQUE', bottom:'BASE RAV', date:'--·--', color:'#8B7FE0', icon:'trophy' },
+  { id:'first-trip', caption:'Primera visita', place:'BASE RAV', date:'01·25', color:'#2A6FDB', icon:'flag', shape:'circle' },
+  { id:'five-visits', caption:'5 visitas', place:'TIENDA', date:'02·25', color:'#1F9E6B', icon:'store', shape:'rect' },
+  { id:'first-buy', caption:'Primera compra', place:'RAV TOYS', date:'02·25', color:'#E0521F', icon:'box', shape:'oval' },
+  { id:'daily', caption:'Misión diaria', place:'ÓRBITA 1', date:'03·25', color:'#C79212', icon:'navTrophy', shape:'scallop' },
+  { id:'birthday', caption:'Cumpleaños', place:'ESTELAR', date:'06·25', color:'#D6488C', icon:'cake', shape:'hex' },
+  { id:'review', caption:'Reseña', place:'RESEÑA', date:'07·25', color:'#6BA82E', icon:'star', shape:'tri' },
+  { id:'kid-month', caption:'Peque del mes', place:'GALAXIA', date:'08·25', color:'#7A5CD6', icon:'saturn', shape:'circle' },
+  { id:'ten-visits', caption:'10 visitas', place:'TIENDA', date:'', color:'#2A6FDB', icon:'rocketC', shape:'rect' },
+  { id:'deals', caption:'Caza-ofertas', place:'MERCADO', date:'', color:'#E0521F', icon:'ufo', shape:'oval' },
+  { id:'collector', caption:'Coleccionista', place:'COSMOS', date:'', color:'#7A5CD6', icon:'sparkle', shape:'circle' },
+  { id:'super-fan', caption:'Súper fan', place:'CLUB RAV', date:'', color:'#C79212', icon:'gift', shape:'scallop' },
+  { id:'legend', caption:'Leyenda peque', place:'OLIMPO', date:'', color:'#1F9E6B', icon:'trophy', shape:'shield' },
 ]
-
-const PLANET_CHOICES = ['Tierra-9', 'Zoglatrón', 'Galletalia', 'Pulpiplaneta', 'Nube-7']
 const KIDS_CONSENT_TEXT = 'Confirmo que soy madre, padre o acudiente del peque y autorizo a RAV Toys a usar esta información para beneficios, recomendaciones, sorpresas de cumpleaños y comunicaciones del RAV Club.'
 const TOTAL_STAMPS = PASSPORT_STAMPS.length
 
@@ -122,42 +120,40 @@ const C = {
   submitDisabled: { width:'100%', minHeight:52, border:0, borderRadius:16, background:'rgba(127,168,216,.16)', color:'rgba(216,224,248,.38)', fontFamily:"'Fredoka',sans-serif", fontSize:16, fontWeight:800 },
   error: { color:'#FF8A5B', fontFamily:"'Fredoka',sans-serif", fontSize:12, lineHeight:1.35, margin:'8px 0' },
   success: { color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:12, margin:'8px 0' },
-  passportShell: { border:'2px solid var(--tone)', borderRadius:22, background:'linear-gradient(180deg,#101b34,#081024)', overflow:'hidden', boxShadow:'0 20px 42px rgba(0,0,0,.44), 0 0 28px var(--toneSoft)' },
-  cover: { position:'relative', padding:16, background:'linear-gradient(145deg,#14254a,#0A1228 64%,#060A18)', borderBottom:'2px solid #FFD84D' },
-  coverMicro: { color:'#FFD84D', fontFamily:'monospace', fontSize:9, letterSpacing:1.4, textTransform:'uppercase' },
-  coverTitle: { fontFamily:"'Bungee',sans-serif", color:'#FBEFC8', fontSize:30, textShadow:'2px 2px 0 #FF6B3D', margin:'8px 0 3px' },
-  official: { color:'#FFD84D', fontFamily:'monospace', fontSize:10, letterSpacing:1.1 },
-  chipGold: { position:'absolute', right:17, top:18, width:42, height:32, borderRadius:7, background:'repeating-linear-gradient(90deg, rgba(255,255,255,.24) 0 2px, transparent 2px 8px), repeating-linear-gradient(0deg, rgba(80,50,0,.26) 0 2px, transparent 2px 9px), #D7A82E', border:'1px solid rgba(255,255,255,.35)' },
-  dataPage: { position:'relative', margin:14, borderRadius:18, overflow:'hidden', background:'radial-gradient(circle at 80% 38%, rgba(63,169,245,.12), transparent 34%), repeating-radial-gradient(circle at 30% 30%, rgba(251,239,200,.08) 0 1px, transparent 1px 8px), linear-gradient(180deg,#102448,#09172F)', border:'1px solid rgba(251,239,200,.28)' },
-  dataInner: { position:'relative', padding:'12px 12px 78px', zIndex:1 },
-  microRow: { display:'grid', gridTemplateColumns:'54px 74px 1fr', gap:7, color:'#7FA8D8', fontFamily:'monospace', fontSize:9, textTransform:'uppercase', marginBottom:10 },
-  dataGrid: { display:'grid', gridTemplateColumns:'112px 1fr', gap:12 },
-  portrait: { width:112, height:138, borderRadius:16, border:'2px solid var(--tone)', background:'#0A1228', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' },
-  portraitSheen: { position:'absolute', inset:0, background:'linear-gradient(120deg, transparent 0 42%, rgba(255,255,255,.20) 46%, transparent 54%)' },
-  photoCaption: { fontFamily:'monospace', color:'#7FA8D8', fontSize:8, marginTop:6, textAlign:'center' },
-  dataLabel: { color:'#7FA8D8', fontFamily:'monospace', fontSize:8, letterSpacing:.8, textTransform:'uppercase', marginBottom:2 },
-  dataValue: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800, marginBottom:7, lineHeight:1.05 },
-  signatureRow: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginTop:12, borderTop:'1px dashed rgba(251,239,200,.24)', paddingTop:11 },
-  signature: { color:'#FBEFC8', fontFamily:'cursive', fontSize:23, transform:'rotate(-3deg)', lineHeight:1 },
-  seal: { width:48, height:48, borderRadius:'50%', border:'2px solid var(--tone)', color:'var(--tone)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 16px var(--toneSoft)' },
-  mrz: { position:'absolute', left:0, right:0, bottom:0, background:'#F4EFE0', color:'#0A1228', fontFamily:'monospace', fontSize:12, lineHeight:1.2, padding:'8px 10px', letterSpacing:.6, whiteSpace:'nowrap', overflow:'hidden' },
-  planetCard: { margin:14, padding:13, borderRadius:18, background:'rgba(139,127,224,.13)', border:'1px solid rgba(139,127,224,.5)' },
-  planetName: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, color:'#FBEFC8', fontFamily:"'Bungee',sans-serif", fontSize:16, marginBottom:10 },
-  quickPicks: { display:'flex', flexWrap:'wrap', gap:7, margin:'8px 0 12px' },
-  quickPick: { border:'1px solid rgba(139,127,224,.55)', background:'rgba(10,18,40,.55)', color:'#CFC7FF', borderRadius:999, padding:'6px 8px', fontFamily:"'Fredoka',sans-serif", fontSize:11, fontWeight:700 },
-  planetStats: { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:7 },
-  planetStat: { background:'rgba(10,18,40,.68)', border:'1px solid rgba(127,168,216,.2)', borderRadius:12, padding:'8px 5px', textAlign:'center' },
-  planetStatLabel: { color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:9, fontWeight:800 },
-  planetStatValue: { color:'#FBEFC8', fontFamily:"'Bungee',sans-serif", fontSize:11, marginTop:3 },
-  logStats: { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, margin:'0 14px 14px' },
-  logStat: { background:'#0E1B3A', border:'1px solid var(--tone)', borderRadius:14, padding:10, textAlign:'center' },
-  logNum: { fontFamily:"'Bungee',sans-serif", color:'var(--tone)', fontSize:18 },
-  logLabel: { fontFamily:"'Fredoka',sans-serif", color:'#7FA8D8', fontSize:10, fontWeight:800, lineHeight:1.15 },
-  stampGrid: { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:9, margin:'0 14px 14px' },
+  passportShell: { padding:'8px 2px 0', background:'transparent' },
+  passportBook: { position:'relative', margin:'2px auto 12px', maxWidth:430 },
+  pageEdge: { position:'absolute', inset:'8px -7px -9px 12px', borderRadius:'6px 16px 16px 6px', background:'#d7deea', boxShadow:'5px 6px 0 -2px #c5cedd, 10px 12px 0 -4px #d7deea, 14px 18px 26px rgba(0,0,0,.4)' },
+  passportPage: { position:'relative', overflow:'hidden', borderRadius:'6px 15px 15px 6px', padding:'13px 13px 0 34px', background:'linear-gradient(168deg,#e7eefb 0%,#d8e3f5 55%,#c7d6ef 100%)', border:'2px solid color-mix(in srgb, var(--tone) 56%, rgba(63,118,196,.5))', boxShadow:'0 16px 40px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.5)', color:'#15233E' },
+  passportSpine: { position:'absolute', left:0, top:0, bottom:0, width:30, background:'linear-gradient(90deg, rgba(40,64,110,.26), rgba(40,64,110,.09) 45%, rgba(40,64,110,.02) 80%, transparent)', boxShadow:'inset 1px 0 0 rgba(255,255,255,.7)', zIndex:1 },
+  stitchLine: { position:'absolute', left:20, top:12, bottom:12, borderLeft:'1.6px dashed rgba(63,118,196,.4)', zIndex:2 },
+  securityPattern: { position:'absolute', inset:0, pointerEvents:'none', background:'repeating-radial-gradient(circle at 30% 20%, rgba(63,118,196,.06) 0 1px, transparent 1px 8px), repeating-linear-gradient(135deg, rgba(46,160,120,.05) 0 1px, transparent 1px 9px)', mixBlendMode:'multiply' },
+  watermark: { position:'absolute', right:-28, bottom:28, opacity:.07, transform:'rotate(-9deg)', pointerEvents:'none' },
+  passportHeader: { position:'relative', zIndex:3, display:'grid', gridTemplateColumns:'34px 1fr auto', alignItems:'center', gap:8, paddingBottom:7, borderBottom:'1px solid rgba(40,64,110,.18)' },
+  passportMicro: { fontFamily:"'Fredoka',sans-serif", fontSize:8, fontWeight:800, letterSpacing:.7, textTransform:'uppercase', color:'#6B7C99', lineHeight:1 },
+  passportTitle: { fontFamily:"'Bungee',sans-serif", fontSize:13.5, color:'#16294B', lineHeight:1.05 },
+  passportNumber: { fontFamily:'monospace', fontSize:11, color:'#C0392B', fontWeight:900, whiteSpace:'nowrap' },
+  identityBlock: { position:'relative', zIndex:3, display:'grid', gridTemplateColumns:'92px 1fr', gap:10, padding:'10px 0 8px', borderBottom:'1px dashed rgba(40,64,110,.24)' },
+  portrait: { width:86, height:96, borderRadius:13, border:'2px solid var(--tone)', background:'#dde6f2', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', boxShadow:'0 0 0 3px rgba(255,255,255,.42)' },
+  portraitSheen: { position:'absolute', inset:0, background:'linear-gradient(120deg, transparent 0 42%, rgba(255,255,255,.45) 46%, transparent 54%)' },
+  photoCaption: { fontFamily:'monospace', color:'#7184A0', fontSize:7.5, fontWeight:900, marginTop:5, textAlign:'center' },
+  fieldsGrid: { display:'grid', gap:5 },
+  fieldPair: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 },
+  dataLabel: { color:'#7184A0', fontFamily:'monospace', fontSize:7.5, fontWeight:900, letterSpacing:.6, textTransform:'uppercase', marginBottom:1 },
+  dataValue: { color:'#15233E', fontFamily:"'Fredoka',sans-serif", fontSize:12.5, fontWeight:800, lineHeight:1.05, wordBreak:'break-word' },
+  editableValue: { display:'inline-flex', alignItems:'center', gap:4, color:'#15233E', fontFamily:"'Fredoka',sans-serif", fontSize:12.5, fontWeight:800, border:0, background:'transparent', padding:0, textAlign:'left' },
+  planetInput: { width:'100%', height:28, border:'1px solid rgba(124,92,224,.45)', borderRadius:8, background:'rgba(255,255,255,.45)', color:'#15233E', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, padding:'0 7px' },
+  stampHead: { position:'relative', zIndex:3, display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, padding:'8px 0 5px' },
+  stampTitle: { display:'flex', alignItems:'center', gap:6, color:'#2F4D78', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:900 },
+  stampCount: { color:'var(--tone)', fontFamily:"'Bungee',sans-serif", fontSize:12 },
+  passportProgress: { position:'relative', zIndex:3, height:6, borderRadius:999, background:'rgba(40,64,110,.14)', overflow:'hidden', marginBottom:7 },
+  passportProgressFill: { height:'100%', width:'var(--progress)', background:'var(--tone)', borderRadius:999 },
+  stampGrid: { position:'relative', zIndex:3, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'7px 5px', padding:'0 0 8px' },
   stampCell: { minWidth:0, textAlign:'center' },
-  stampCaption: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:10, fontWeight:800, lineHeight:1.1, marginTop:4 },
-  stampLockedCaption: { color:'rgba(127,168,216,.52)', fontFamily:"'Fredoka',sans-serif", fontSize:10, fontWeight:800, lineHeight:1.1, marginTop:4 },
-  footerNote: { margin:14, border:'1.5px dashed #FFD84D', color:'#FFD84D', borderRadius:16, padding:12, textAlign:'center', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800 },
+  stampCaption: { color:'#3A4D6E', fontFamily:"'Fredoka',sans-serif", fontSize:8, fontWeight:800, lineHeight:1.05, marginTop:1 },
+  stampLockedCaption: { color:'#8593AD', fontFamily:"'Fredoka',sans-serif", fontSize:8, fontWeight:800, lineHeight:1.05, marginTop:1 },
+  stampCenter: { position:'absolute', left:'50%', top:'46%', transform:'translate(-50%,-50%)', display:'flex', alignItems:'center', justifyContent:'center' },
+  mrz: { position:'relative', zIndex:3, margin:'0 -13px 0 -34px', background:'#f0ede2', color:'#15233E', fontFamily:'monospace', fontSize:10, lineHeight:1.22, padding:'7px 8px 7px 34px', letterSpacing:.4, whiteSpace:'nowrap', overflow:'hidden', borderTop:'1px solid rgba(40,64,110,.18)' },
+  footerNote: { margin:'12px 4px 0', border:'1.5px dashed #FFD84D', color:'#FFD84D', borderRadius:16, padding:10, textAlign:'center', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, background:'rgba(255,216,77,.08)' },
 }
 
 function SvgWrap({ children, size = 48, style }) {
@@ -229,6 +225,8 @@ function SmallIcon({ type, color = 'currentColor', size = 22 }) {
   if (type === 'pencil') return <svg {...common}><path d="M5 19h4l10-10-4-4L5 15v4Z" stroke={color} strokeWidth="1.7" strokeLinejoin="round"/><path d="m13.5 6.5 4 4" stroke={color} strokeWidth="1.7"/></svg>
   if (type === 'lock') return <svg {...common}><rect x="6" y="10" width="12" height="9" rx="2" stroke={color} strokeWidth="1.7"/><path d="M9 10V8a3 3 0 0 1 6 0v2" stroke={color} strokeWidth="1.7"/></svg>
   if (type === 'seal') return <svg {...common}><path d="M8 5h8v5c0 2.4-1.6 4.2-4 4.2S8 12.4 8 10V5Z" stroke={color} strokeWidth="1.7"/><path d="M9 19h6M12 14v3" stroke={color} strokeWidth="1.7" strokeLinecap="round"/></svg>
+  if (type === 'saturn') return <svg {...common}><circle cx="12" cy="12" r="5.2" stroke={color} strokeWidth="1.7"/><path d="M3.5 14.3c4.2 2.1 12.2.8 17-3.6" stroke={color} strokeWidth="1.8" strokeLinecap="round"/><path d="M8.2 7.5c2.4 1.4 5.9 1.7 9 .7" stroke={color} strokeWidth="1.2" opacity=".7" strokeLinecap="round"/></svg>
+  if (type === 'flag') return <svg {...common}><path d="M7 4v16M7 5h11l-2 4 2 4H7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
   return <svg {...common}><circle cx="12" cy="12" r="7" stroke={color} strokeWidth="1.7"/></svg>
 }
 
@@ -236,33 +234,57 @@ function StampIcon({ type, color }) {
   if (type === 'flag') return <path d="M20 17v18M20 18h12l-2 4 2 4H20" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
   if (type === 'store') return <path d="M15 22h18l-2-6H17l-2 6Zm2 0v11h14V22M21 33v-6h6v6" stroke={color} strokeWidth="2.1" strokeLinejoin="round" />
   if (type === 'box') return <path d="M15 20h18v14H15V20Zm0 0 4-5h10l4 5M24 15v19" stroke={color} strokeWidth="2.1" strokeLinejoin="round" />
-  if (type === 'trophy') return <path d="M19 15h10v5c0 3-2 5-5 5s-5-2-5-5v-5Zm0 2h-4c0 4 2 6 5 6M29 17h4c0 4-2 6-5 6M24 25v4M19 33h10" stroke={color} strokeWidth="2.1" strokeLinecap="round" />
+  if (type === 'trophy' || type === 'navTrophy') return <path d="M19 15h10v5c0 3-2 5-5 5s-5-2-5-5v-5Zm0 2h-4c0 4 2 6 5 6M29 17h4c0 4-2 6-5 6M24 25v4M19 33h10" stroke={color} strokeWidth="2.1" strokeLinecap="round" />
   if (type === 'cake') return <path d="M16 23h16v10H16V23Zm0 4c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0M24 18v5" stroke={color} strokeWidth="2.1" strokeLinecap="round" />
-  if (type === 'spark') return <path d="m24 14 3 7 7 1-5 5 1 7-6-3.5L18 34l1-7-5-5 7-1 3-7Z" stroke={color} strokeWidth="2.1" strokeLinejoin="round" />
-  if (type === 'planet') return <><circle cx="24" cy="24" r="7" stroke={color} strokeWidth="2"/><path d="M12 27c7 4 18 2 24-6" stroke={color} strokeWidth="2" strokeLinecap="round"/></>
+  if (type === 'star' || type === 'spark' || type === 'sparkle') return <path d="m24 14 3 7 7 1-5 5 1 7-6-3.5L18 34l1-7-5-5 7-1 3-7Z" stroke={color} strokeWidth="2.1" strokeLinejoin="round" />
+  if (type === 'planet' || type === 'saturn') return <><circle cx="24" cy="24" r="7" stroke={color} strokeWidth="2"/><path d="M12 27c7 4 18 2 24-6" stroke={color} strokeWidth="2" strokeLinecap="round"/></>
   if (type === 'tag') return <path d="M15 16h10l8 8-10 10-8-8V16Zm5 5h.1" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+  if (type === 'rocketC') return <path d="M28 13c5 4 6 11 1 20l-9-9c-1.5-5 1-9 8-11Zm-9 12-5 2 3-5m12 12-2 5 5-3" stroke={color} strokeWidth="2.1" strokeLinejoin="round" strokeLinecap="round" />
+  if (type === 'ufo') return <><path d="M14 26c3-5 17-5 20 0-2 5-18 5-20 0Z" stroke={color} strokeWidth="2.1"/><path d="M20 24c.7-4 7.3-4 8 0" stroke={color} strokeWidth="2.1"/><path d="M19 30v3m5-2v3m5-4v3" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></>
+  if (type === 'gift') return <path d="M16 22h16v12H16V22Zm8 0v12M16 27h16M20 22c-2-1.3-2-5 .2-5 1.8 0 2.8 2.2 3.8 5 1-2.8 2-5 3.8-5 2.2 0 2.2 3.7.2 5" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"/>
   return <circle cx="24" cy="24" r="7" stroke={color} strokeWidth="2" />
+}
+
+function StampShape({ shape, color, locked, filterId }) {
+  const common = { stroke:color, fill:'none', strokeLinecap:'round', strokeLinejoin:'round', filter:locked ? undefined : `url(#${filterId})` }
+  const dash = locked ? '4 4' : '0'
+  if (shape === 'rect') return <><rect x="9" y="13" width="50" height="42" rx="8" {...common} strokeWidth="2.2" strokeDasharray={dash} /><rect x="14" y="18" width="40" height="32" rx="6" {...common} strokeWidth="1" strokeDasharray={dash} /></>
+  if (shape === 'oval') return <><ellipse cx="34" cy="34" rx="28" ry="21" {...common} strokeWidth="2.2" strokeDasharray={dash} /><ellipse cx="34" cy="34" rx="22" ry="16" {...common} strokeWidth="1" strokeDasharray={dash} /></>
+  if (shape === 'scallop') return <><path d="M34 5c3 0 5 4 8 5 3 1 7-1 9 1s0 6 1 9c1 3 5 5 5 8s-4 5-5 8c-1 3 1 7-1 9s-6 0-9 1c-3 1-5 5-8 5s-5-4-8-5c-3-1-7 1-9-1s0-6-1-9c-1-3-5-5-5-8s4-5 5-8c1-3-1-7 1-9s6 0 9-1c3-1 5-5 8-5Z" {...common} strokeWidth="2.2" strokeDasharray={dash} /><circle cx="34" cy="34" r="21" {...common} strokeWidth="1" strokeDasharray={dash} /></>
+  if (shape === 'hex') return <><path d="M34 6 57 20v28L34 62 11 48V20L34 6Z" {...common} strokeWidth="2.2" strokeDasharray={dash} /><path d="M34 13 51 23v22L34 55 17 45V23L34 13Z" {...common} strokeWidth="1" strokeDasharray={dash} /></>
+  if (shape === 'tri') return <><path d="M34 7 60 57H8L34 7Z" {...common} strokeWidth="2.2" strokeDasharray={dash} /><path d="M34 18 51 52H17L34 18Z" {...common} strokeWidth="1" strokeDasharray={dash} /></>
+  if (shape === 'shield') return <><path d="M13 10h42v22c0 13-8 23-21 29-13-6-21-16-21-29V10Z" {...common} strokeWidth="2.2" strokeDasharray={dash} /><path d="M19 16h30v16c0 9-5 17-15 22-10-5-15-13-15-22V16Z" {...common} strokeWidth="1" strokeDasharray={dash} /></>
+  return <><circle cx="34" cy="34" r="29" {...common} strokeWidth="2.2" strokeDasharray={dash} /><circle cx="34" cy="34" r="22" {...common} strokeWidth="1" strokeDasharray={dash} /></>
 }
 
 function RubberStamp({ stamp, locked, index }) {
   const arcTop = `arcTop-${stamp.id}`
-  const arcBottom = `arcBottom-${stamp.id}`
-  const rotation = locked ? 0 : [-7, 4, -3, 6, -5, 3, -2][index % 7]
-  const color = locked ? 'rgba(127,168,216,.35)' : stamp.color
+  const filterId = `stampDistress-${stamp.id}`
+  const rotation = locked ? 0 : [-6, 4, -3, 5, -5, 3, -2, 6, -4, 2, -5, 4][index % 12]
+  const color = locked ? '#9aa9c2' : stamp.color
+  const isRound = stamp.shape === 'circle' || stamp.shape === 'scallop'
   return (
-    <svg width="86" height="86" viewBox="0 0 86 86" fill="none" aria-hidden="true" style={{ transform:`rotate(${rotation}deg)`, opacity:locked ? .55 : 1 }}>
-      <defs>
-        <path id={arcTop} d="M18 44a25 25 0 0 1 50 0" />
-        <path id={arcBottom} d="M68 45a25 25 0 0 1-50 0" />
-      </defs>
-      <circle cx="43" cy="43" r="37" stroke={color} strokeWidth="2.5" strokeDasharray={locked ? '4 5' : '0'} />
-      <circle cx="43" cy="43" r="29" stroke={color} strokeWidth="1.6" opacity=".8" />
-      {locked ? <SmallIcon type="lock" color={color} size={32} /> : <StampIcon type={stamp.icon} color={color} />}
-      <text fontSize="6.2" fontFamily="monospace" fontWeight="700" fill={color} letterSpacing=".8"><textPath href={`#${arcTop}`} startOffset="50%" textAnchor="middle">{locked ? 'POR DESBLOQUEAR' : stamp.top}</textPath></text>
-      <text fontSize="6.2" fontFamily="monospace" fontWeight="700" fill={color} letterSpacing=".8"><textPath href={`#${arcBottom}`} startOffset="50%" textAnchor="middle">{locked ? 'COLECCIÓN RAV' : `★ ${stamp.bottom} ★`}</textPath></text>
-      <circle cx="16" cy="43" r="1.8" fill={color} /><circle cx="70" cy="43" r="1.8" fill={color} />
-      <text x="43" y="59" textAnchor="middle" fontSize="7" fontFamily="monospace" fontWeight="800" fill={color}>{locked ? '--·--' : stamp.date}</text>
-    </svg>
+    <div style={{ position:'relative', width:68, height:68, margin:'0 auto', transform:`rotate(${rotation}deg)`, opacity:locked ? .58 : 1, color, mixBlendMode:locked ? 'normal' : 'multiply' }}>
+      <svg width="68" height="68" viewBox="0 0 68 68" fill="none" aria-hidden="true">
+        <defs>
+          <path id={arcTop} d="M12 35a22 22 0 0 1 44 0" />
+          <filter id={filterId}>
+            <feTurbulence type="fractalNoise" baseFrequency=".82" numOctaves="1" seed={index + 3} />
+            <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 -4" />
+            <feComposite operator="in" in2="SourceGraphic" />
+          </filter>
+        </defs>
+        <StampShape shape={stamp.shape} color="currentColor" locked={locked} filterId={filterId} />
+        {!locked && isRound && (
+          <text fontSize="5.6" fontFamily="monospace" fontWeight="900" fill="currentColor" letterSpacing=".7">
+            <textPath href={`#${arcTop}`} startOffset="50%" textAnchor="middle">{stamp.place}</textPath>
+          </text>
+        )}
+        {!locked && !isRound && <text x="34" y="16" textAnchor="middle" fontSize="5.6" fontFamily="monospace" fontWeight="900" fill="currentColor" letterSpacing=".7">{stamp.place}</text>}
+        {!locked && <text x="34" y="55" textAnchor="middle" fontSize="6.6" fontFamily="monospace" fontWeight="900" fill="currentColor">{stamp.date || '★ RAV ★'}</text>}
+      </svg>
+      <span style={{ ...C.stampCenter, color }}>{locked ? <SmallIcon type="lock" color="currentColor" size={20} /> : <svg width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true"><StampIcon type={stamp.icon} color="currentColor" /></svg>}</span>
+    </div>
   )
 }
 
@@ -314,14 +336,12 @@ function getTone(kid, index = 0) {
   return { color:'#BDF24A', soft:'rgba(189,242,74,.24)', name:'Verde' }
 }
 
-function getEarnedStampIds(kid) {
-  const earned = new Set(['first-trip'])
-  ;(kid.passport_stamps || []).forEach(item => earned.add(item.stamp_key))
-  return earned
+function getEarnedStampCount(kid) {
+  return Math.min(TOTAL_STAMPS, 1 + (kid.passport_stamps || []).length)
 }
 
 function getRank(kid) {
-  const count = getEarnedStampIds(kid).size
+  const count = getEarnedStampCount(kid)
   if (count >= 8) return 'Capitán'
   if (count >= 4) return 'Piloto'
   return 'Explorador'
@@ -336,8 +356,8 @@ function buildMrz(kid, planet) {
   const cleanName = (kid.nickname || 'EXPLORADOR').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z]/g, '<')
   const id = getPassportNumber(kid).replace('-', '')
   const cleanPlanet = (planet || 'TIERRA9').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '<')
-  const line1 = (`P<RAV<<${cleanName}`).padEnd(44, '<').slice(0, 44)
-  const line2 = (`${id}<${cleanPlanet}<CLUBRAV`).padEnd(44, '<').slice(0, 44)
+  const line1 = (`P<RAV<<${cleanName}`).padEnd(40, '<').slice(0, 40)
+  const line2 = (`${id}<${cleanPlanet}<CLUBRAV`).padEnd(40, '<').slice(0, 40)
   return [line1, line2]
 }
 
@@ -566,7 +586,7 @@ export default function Kids() {
 
   const formReady = !!form.nickname.trim() && (editingId || kidsConsent)
   const selectedTone = selectedPassport ? getTone(selectedPassport, kids.findIndex(k => k.id === selectedPassport.id)) : getTone({ avatar:'rav-green' })
-  const selectedEarned = selectedPassport ? getEarnedStampIds(selectedPassport) : new Set()
+  const selectedEarnedCount = selectedPassport ? getEarnedStampCount(selectedPassport) : 0
   const mrz = selectedPassport ? buildMrz(selectedPassport, planetName) : ['', '']
 
   return (
@@ -592,8 +612,8 @@ export default function Kids() {
 
           {kids.map((kid, index) => {
             const tone = getTone(kid, index)
-            const earned = getEarnedStampIds(kid)
-            const progress = Math.min(100, Math.round((earned.size / TOTAL_STAMPS) * 100))
+            const earnedCount = getEarnedStampCount(kid)
+            const progress = Math.min(100, Math.round((earnedCount / TOTAL_STAMPS) * 100))
             return (
               <article key={kid.id} style={{ ...C.kidCard, '--tone':tone.color, '--toneSoft':tone.soft, '--progress':`${progress}%` }}>
                 <span style={C.kidCardGlow} />
@@ -608,7 +628,7 @@ export default function Kids() {
 
                 {!!kid.interests?.length && <div style={C.chips}>{kid.interests.map(interest => <span key={interest} style={C.chip}>{interest}</span>)}</div>}
 
-                <div style={C.meterTop}><span>Sellos del pasaporte</span><span style={C.meterNum}>{earned.size}/{TOTAL_STAMPS}</span></div>
+                <div style={C.meterTop}><span>Sellos del pasaporte</span><span style={C.meterNum}>{earnedCount}/{TOTAL_STAMPS}</span></div>
                 <div style={C.meterTrack}><div style={C.meterFill} /></div>
 
                 <div style={C.actions}>
@@ -685,69 +705,72 @@ export default function Kids() {
               <p style={C.overlayTitle}>Pasaporte de {selectedPassport.nickname}</p>
             </div>
 
-            <div style={{ ...C.passportShell, '--tone':selectedTone.color, '--toneSoft':selectedTone.soft }}>
-              <section style={C.cover}>
-                <div style={C.chipGold} />
-                <SmallIcon type="seal" color="#FFD84D" size={36} />
-                <p style={C.coverMicro}>Unión Galáctica de Exploradores</p>
-                <p style={C.coverTitle}>Pasaporte</p>
-                <p style={C.official}>★ CLUB RAV · DOCUMENTO OFICIAL ★</p>
-              </section>
+            <div style={{ ...C.passportShell, '--tone':selectedTone.color, '--toneSoft':selectedTone.soft, '--progress':`${Math.round((selectedEarnedCount / TOTAL_STAMPS) * 100)}%` }}>
+              {error && <p style={{ ...C.error, margin:'0 4px 10px' }}>{error}</p>}
+              {success && <p style={{ ...C.success, margin:'0 4px 10px' }}>{success}</p>}
 
-              {error && <p style={{ ...C.error, margin:'12px 14px 0' }}>{error}</p>}
-              {success && <p style={{ ...C.success, margin:'12px 14px 0' }}>{success}</p>}
+              <section style={C.passportBook}>
+                <span style={C.pageEdge} />
+                <div style={C.passportPage}>
+                  <span style={C.passportSpine} />
+                  <span style={C.stitchLine} />
+                  <span style={C.securityPattern} />
+                  <span style={C.watermark}><RavAvatar avatar={normalizeAvatar(selectedPassport.avatar)} size={170} /></span>
 
-              <section style={C.dataPage}>
-                <div style={C.dataInner}>
-                  <div style={C.microRow}><span>Tipo P</span><span>Código RAV</span><span style={{ color:selectedTone.color }}>Pasaporte Nº {getPassportNumber(selectedPassport)}</span></div>
-                  <div style={C.dataGrid}>
+                  <div style={C.passportHeader}>
+                    <SmallIcon type="saturn" color="#C28A1A" size={30} />
+                    <div>
+                      <p style={C.passportMicro}>Unión Galáctica de Exploradores</p>
+                      <p style={C.passportTitle}>Pasaporte · Club RAV</p>
+                    </div>
+                    <p style={C.passportNumber}>{getPassportNumber(selectedPassport)}</p>
+                  </div>
+
+                  <div style={C.identityBlock}>
                     <div>
                       <div style={C.portrait} onClick={() => !passportUploading && passportFileInputRef.current?.click()} title="Cambiar foto">
-                        {selectedPassport.avatar_url ? <img src={selectedPassport.avatar_url} alt={`Foto de ${selectedPassport.nickname}`} style={C.kidPhoto} /> : <RavAvatar avatar={normalizeAvatar(selectedPassport.avatar)} size={94} />}
+                        {selectedPassport.avatar_url ? <img src={selectedPassport.avatar_url} alt={`Foto de ${selectedPassport.nickname}`} style={C.kidPhoto} /> : <RavAvatar avatar={normalizeAvatar(selectedPassport.avatar)} size={80} />}
                         <span style={C.portraitSheen} />
                       </div>
                       <p style={C.photoCaption}>{passportUploading ? 'SUBIENDO...' : 'FOTO OFICIAL · TOCA PARA EDITAR'}</p>
-                      <input ref={passportFileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handlePassportPhotoUpload} />
+                      <input ref={passportFileInputRef} type="file" accept="image/*" capture="user" style={{ display:'none' }} onChange={handlePassportPhotoUpload} />
                     </div>
-                    <div>
-                      <p style={C.dataLabel}>Apellidos / Nombres</p><p style={C.dataValue}>{selectedPassport.nickname}</p>
-                      <p style={C.dataLabel}>Nacionalidad</p><p style={C.dataValue}>Galaxia RAV</p>
-                      <p style={C.dataLabel}>Edad estelar</p><p style={C.dataValue}>{calculateAge(selectedPassport.birth_date)} años</p>
-                      <p style={C.dataLabel}>Rango</p><p style={{ ...C.dataValue, color:selectedTone.color }}>{getRank(selectedPassport)}</p>
-                      <p style={C.dataLabel}>Cumpleaños</p><p style={C.dataValue}>{formatBirthday(selectedPassport.birth_date)}</p>
-                      <p style={C.dataLabel}>Expedido</p><p style={C.dataValue}>{new Date(selectedPassport.created_at || Date.now()).getFullYear()}</p>
-                      <p style={C.dataLabel}>Válido hasta</p><p style={C.dataValue}>∞</p>
+                    <div style={C.fieldsGrid}>
+                      <div>
+                        <p style={C.dataLabel}>Nombre del explorador</p>
+                        <p style={{ ...C.dataValue, fontSize:15 }}>{selectedPassport.nickname}</p>
+                      </div>
+                      <div style={C.fieldPair}>
+                        <div><p style={C.dataLabel}>Rango</p><p style={{ ...C.dataValue, color:selectedTone.color }}>{getRank(selectedPassport)}</p></div>
+                        <div><p style={C.dataLabel}>Edad estelar</p><p style={C.dataValue}>{calculateAge(selectedPassport.birth_date)} años</p></div>
+                      </div>
+                      <div style={C.fieldPair}>
+                        <div><p style={C.dataLabel}>Cumpleaños</p><p style={C.dataValue}>{formatBirthday(selectedPassport.birth_date)}</p></div>
+                        <div>
+                          <p style={C.dataLabel}>Planeta de origen</p>
+                          {planetEditing
+                            ? <input style={C.planetInput} value={planetName} maxLength={16} onChange={e => savePlanet(e.target.value)} onBlur={() => setPlanetEditing(false)} autoFocus />
+                            : <button style={C.editableValue} onClick={() => setPlanetEditing(true)}>{planetName}<SmallIcon type="pencil" color="#7C5CE0" size={13} /></button>}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div style={C.signatureRow}>
-                    <div><p style={C.signature}>{selectedPassport.nickname}</p><p style={C.dataLabel}>Firma del explorador</p></div>
-                    <div style={C.seal}><SmallIcon type="seal" color="currentColor" /></div>
+
+                  <div style={C.stampHead}>
+                    <p style={C.stampTitle}><SmallIcon type="flag" color="#C0392B" size={17} /> Sellos de viaje</p>
+                    <p style={C.stampCount}>{selectedEarnedCount}/{TOTAL_STAMPS}</p>
                   </div>
+                  <div style={C.passportProgress}><div style={C.passportProgressFill} /></div>
+
+                  <div style={C.stampGrid}>{PASSPORT_STAMPS.map((stamp, index) => {
+                    const locked = index >= selectedEarnedCount
+                    return <div key={stamp.id} style={C.stampCell}><RubberStamp stamp={stamp} locked={locked} index={index} /><p style={locked ? C.stampLockedCaption : C.stampCaption}>{stamp.caption}</p></div>
+                  })}</div>
+
+                  <div style={C.mrz}>{mrz[0]}<br />{mrz[1]}</div>
                 </div>
-                <div style={C.mrz}>{mrz[0]}<br />{mrz[1]}</div>
               </section>
 
-              <section style={C.planetCard}>
-                <div style={C.planetName}>
-                  {planetEditing ? <input style={{ ...C.input, height:38 }} value={planetName} maxLength={16} onChange={e => savePlanet(e.target.value)} onBlur={() => setPlanetEditing(false)} autoFocus /> : <span>{planetName}</span>}
-                  <button style={C.backBtn} onClick={() => setPlanetEditing(true)}><SmallIcon type="pencil" color="#9FD8FF" size={16} /></button>
-                </div>
-                <div style={C.quickPicks}>{PLANET_CHOICES.map(choice => <button key={choice} style={C.quickPick} onClick={() => savePlanet(choice)}>{choice}</button>)}</div>
-                <div style={C.planetStats}>{['Gravedad','Lunas','Clima','Capitán'].map((label, i) => <div key={label} style={C.planetStat}><p style={C.planetStatLabel}>{label}</p><p style={C.planetStatValue}>{['Suave','2','Confeti', selectedPassport.nickname.split(' ')[0]][i]}</p></div>)}</div>
-              </section>
-
-              <p style={{ ...C.section, margin:'0 14px 12px' }}><span style={C.sectionArrow}>▸</span> Bitácora del explorador</p>
-              <div style={C.logStats}>
-                <div style={C.logStat}><p style={C.logNum}>1.450</p><p style={C.logLabel}>Combustible estelar</p></div>
-                <div style={C.logStat}><p style={C.logNum}>{selectedEarned.size}/{TOTAL_STAMPS}</p><p style={C.logLabel}>Sellos de viaje</p></div>
-                <div style={C.logStat}><p style={C.logNum}>8</p><p style={C.logLabel}>Misiones</p></div>
-              </div>
-
-              <p style={{ ...C.section, margin:'0 14px 12px' }}><span style={C.sectionArrow}>▸</span> Sellos de viaje · {selectedEarned.size}/{TOTAL_STAMPS}</p>
-              <div style={C.stampGrid}>{PASSPORT_STAMPS.map((stamp, index) => {
-                const locked = !selectedEarned.has(stamp.id)
-                return <div key={stamp.id} style={C.stampCell}><RubberStamp stamp={stamp} locked={locked} index={index} /><p style={locked ? C.stampLockedCaption : C.stampCaption}>{stamp.caption}</p></div>
-              })}</div>
               <p style={C.footerNote}>Visita la tienda RAV para sellar tu pasaporte.</p>
             </div>
           </div>
