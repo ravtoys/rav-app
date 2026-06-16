@@ -741,7 +741,7 @@ export default function Kids() {
                         <p style={{ ...C.dataValue, fontSize:15 }}>{selectedPassport.nickname}</p>
                       </div>
                       <div style={C.fieldPair}>
-                        <div><p style={C.dataLabel}>Rango</p><p style={{ ...C.dataValue, color:selectedTone.color }}>{getRank(selectedPassport)}</p></div>
+                        <div><p style={C.dataLabel}>Rango</p><p style={C.dataValue}>{getRank(selectedPassport)}</p></div>
                         <div><p style={C.dataLabel}>Edad estelar</p><p style={C.dataValue}>{calculateAge(selectedPassport.birth_date)} años</p></div>
                       </div>
                       <div style={C.fieldPair}>
