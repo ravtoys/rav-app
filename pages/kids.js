@@ -91,7 +91,7 @@ const C = {
   deleteBtn: { border:'1px solid rgba(255,107,61,.48)', borderRadius:13, background:'rgba(255,107,61,.08)', color:'#FF8A5B', minHeight:38, fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800 },
   addCard: { width:'100%', minHeight:96, margin:'8px 0 22px', border:'2px dashed rgba(189,242,74,.62)', borderRadius:20, background:'rgba(189,242,74,.07)', color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:15, fontWeight:800, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:7 },
   empty: { color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", textAlign:'center', padding:'22px 10px', lineHeight:1.4 },
-  overlay: { position:'fixed', inset:0, zIndex:80, background:'rgba(6,10,24,.96)', overflowY:'auto', color:'#FBEFC8' },
+  overlay: { position:'fixed', inset:0, zIndex:200, background:'rgba(6,10,24,.96)', overflowY:'auto', color:'#FBEFC8' },
   overlayInner: { minHeight:'100vh', maxWidth:560, margin:'0 auto', padding:'16px 14px 104px' },
   overlayTop: { position:'sticky', top:0, zIndex:2, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'10px 0 14px', background:'linear-gradient(180deg, rgba(6,10,24,.98), rgba(6,10,24,.78))', backdropFilter:'blur(12px)' },
   backBtn: { border:'1px solid rgba(127,168,216,.35)', background:'rgba(10,18,40,.72)', color:'#9FD8FF', borderRadius:999, padding:'9px 12px', fontFamily:"'Fredoka',sans-serif", fontWeight:800 },
