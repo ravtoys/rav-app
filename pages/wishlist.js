@@ -1,18 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 
 const STATUS_LABELS = {
   wanted: 'Deseado',
+  reserved: 'Reservado',
   purchased: 'Comprado',
   unavailable: 'Agotado',
-}
-
-const MATCH_LABELS = {
-  manual_confirmed: 'Confirmado manualmente',
-  pending_confirmation: 'RAV lo está confirmando',
-  shopify_matched: 'Confirmado por Shopify',
 }
 
 const blankManualForm = {
@@ -24,73 +19,182 @@ const blankManualForm = {
   status: 'wanted',
 }
 
+const FILTERS = ['all', 'general']
+const TONES = ['#BDF24A', '#3FA9F5', '#FF6B3D', '#8B7FE0', '#FFD84D']
+
 const C = {
-  page: { minHeight:'100vh', background:'#080618', paddingBottom:92 },
-  header: { background:'linear-gradient(180deg,#1a0a3d,#0d0b2b)', padding:'22px 20px 18px' },
-  eyebrow: { fontSize:11, color:'rgba(170,235,58,0.7)', fontWeight:900, letterSpacing:1, marginBottom:4 },
-  title: { fontFamily:"'Exo 2',sans-serif", fontSize:24, fontWeight:900, color:'white', lineHeight:1.1 },
-  sub: { fontSize:12, color:'rgba(255,255,255,0.58)', marginTop:8, lineHeight:1.45 },
-  body: { padding:'14px 16px' },
-  topActions: { display:'flex', gap:10, alignItems:'center', marginBottom:14 },
-  addBtn: { flex:1, padding:'14px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:14, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  cancelBtn: { padding:'13px 14px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  panel: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:14, marginBottom:14 },
-  flowPanel: { background:'linear-gradient(180deg,rgba(170,235,58,0.09),rgba(43,63,191,0.1))', border:'1px solid rgba(170,235,58,0.24)', borderRadius:16, padding:14, marginBottom:14 },
-  stepPill: { display:'inline-block', padding:'5px 9px', borderRadius:999, background:'rgba(170,235,58,0.14)', color:'#AAEB3A', border:'1px solid rgba(170,235,58,0.28)', fontSize:10, fontWeight:900, marginBottom:10 },
-  question: { color:'white', fontSize:18, fontWeight:900, lineHeight:1.15, marginBottom:12 },
-  helper: { color:'rgba(255,255,255,0.58)', fontSize:12, lineHeight:1.4, marginBottom:12 },
-  optionGrid: { display:'grid', gap:10 },
-  optionCard: { width:'100%', display:'flex', alignItems:'center', gap:12, textAlign:'left', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(8,6,24,0.58)', color:'white', borderRadius:14, padding:12, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  optionCardActive: { width:'100%', display:'flex', alignItems:'center', gap:12, textAlign:'left', border:'1.5px solid #AAEB3A', background:'rgba(170,235,58,0.12)', color:'white', borderRadius:14, padding:12, cursor:'pointer', fontFamily:"'Nunito',sans-serif", boxShadow:'0 0 18px rgba(170,235,58,0.12)' },
-  optionIcon: { width:42, height:42, borderRadius:14, background:'rgba(170,235,58,0.14)', display:'flex', alignItems:'center', justifyContent:'center', color:'#AAEB3A', flexShrink:0 },
-  optionTitle: { color:'white', fontSize:14, fontWeight:900, marginBottom:3 },
-  optionSub: { color:'rgba(255,255,255,0.52)', fontSize:12, lineHeight:1.25 },
-  secondaryOption: { width:'100%', display:'flex', alignItems:'center', gap:12, textAlign:'left', border:'1px dashed rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.025)', color:'rgba(255,255,255,0.72)', borderRadius:14, padding:12, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  label: { fontSize:10, color:'rgba(170,235,58,0.65)', fontWeight:900, letterSpacing:1, margin:'0 0 6px' },
-  input: { width:'100%', padding:'12px 13px', borderRadius:12, border:'1px solid rgba(170,235,58,0.28)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginBottom:12 },
-  select: { width:'100%', padding:'12px 13px', borderRadius:12, border:'1px solid rgba(170,235,58,0.28)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginBottom:12 },
+  page: {
+    minHeight:'100vh',
+    paddingBottom:104,
+    position:'relative',
+    overflow:'hidden',
+    color:'#FBEFC8',
+    background:'radial-gradient(120% 70% at 50% -6%, rgba(63,169,245,.30), transparent 55%), radial-gradient(95% 60% at 92% 8%, rgba(255,107,61,.22), transparent 52%), linear-gradient(180deg,#0E1B3A,#0A1228 52%,#060A18)',
+  },
+  nebula: { position:'absolute', width:230, height:230, borderRadius:'50%', filter:'blur(52px)', opacity:.42, zIndex:0 },
+  grain: {
+    position:'fixed',
+    inset:0,
+    zIndex:1,
+    pointerEvents:'none',
+    opacity:.4,
+    mixBlendMode:'overlay',
+    backgroundImage:'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27 viewBox=%270 0 160 160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.78%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27 opacity=%27.7%27/%3E%3C/svg%3E")',
+    backgroundSize:'160px 160px',
+  },
+  stars: { position:'absolute', inset:0, zIndex:0, pointerEvents:'none' },
+  star: { position:'absolute', borderRadius:'50%', opacity:.8 },
+  header: { position:'relative', zIndex:2, padding:'58px 18px 18px', background:'linear-gradient(135deg, rgba(108,96,184,.45), rgba(63,169,245,.16) 72%), #0C1530', borderBottom:'2px solid #3FA9F5', boxShadow:'0 10px 22px rgba(0,0,0,.26)' },
+  headerInner: { width:'100%', maxWidth:430, margin:'0 auto' },
+  titleRow: { display:'flex', alignItems:'center', gap:10 },
+  title: { fontFamily:"'Bungee',sans-serif", fontSize:23, lineHeight:1.05, color:'#FBEFC8', textTransform:'uppercase', textShadow:'2px 2px 0 #FF6B3D' },
+  sub: { fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:600, color:'#7FA8D8', marginTop:7, lineHeight:1.35 },
+  body: { position:'relative', zIndex:2, width:'100%', maxWidth:430, margin:'0 auto', padding:'16px 14px 0' },
+  captureCard: { width:'100%', display:'grid', gridTemplateColumns:'62px 1fr 26px', alignItems:'center', gap:12, textAlign:'left', border:'2px solid #BDF24A', borderRadius:20, padding:14, background:'linear-gradient(150deg, rgba(189,242,74,.16), #0E1B3A 62%)', boxShadow:'0 0 0 3px rgba(189,242,74,.12), 0 16px 34px rgba(0,0,0,.34), inset 0 0 24px rgba(189,242,74,.08)', color:'#FBEFC8', cursor:'pointer', overflow:'hidden', position:'relative' },
+  captureChip: { width:52, height:52, borderRadius:17, display:'flex', alignItems:'center', justifyContent:'center', color:'#10240A', background:'linear-gradient(160deg,#D6FF6E,#BDF24A 55%,#7FC916)', boxShadow:'0 10px 20px rgba(127,201,22,.32), inset 0 2px 0 rgba(255,255,255,.5)', position:'relative' },
+  sparkle: { position:'absolute', right:-2, top:-4, color:'#FFD84D', filter:'drop-shadow(0 0 8px rgba(255,216,77,.75))' },
+  captureTitle: { fontFamily:"'Bungee',sans-serif", fontSize:16, color:'#FBEFC8', lineHeight:1.05 },
+  captureSub: { fontFamily:"'Fredoka',sans-serif", color:'#9FD8FF', fontSize:12, fontWeight:600, lineHeight:1.3, marginTop:5 },
+  shareRow: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, margin:'14px 0', padding:12, borderRadius:17, border:'1.5px solid rgba(189,242,74,.28)', background:'rgba(20,26,58,.5)', backdropFilter:'blur(10px)' },
+  shareLeft: { display:'flex', alignItems:'center', gap:10, minWidth:0 },
+  goldChip: { width:40, height:40, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', background:'#FFD84D', color:'#0E1B3A', flex:'0 0 auto', boxShadow:'0 0 16px rgba(255,216,77,.28)' },
+  shareTitle: { fontFamily:"'Fredoka',sans-serif", fontSize:15, fontWeight:800, color:'#FBEFC8' },
+  shareSub: { fontFamily:"'Nunito',sans-serif", fontSize:11, color:'#7FA8D8', marginTop:2 },
+  shareBtn: { border:0, borderRadius:999, padding:'9px 11px', background:'#3FA9F5', color:'#06101F', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, display:'flex', alignItems:'center', gap:6, flex:'0 0 auto' },
+  filters: { display:'flex', gap:8, overflowX:'auto', padding:'0 1px 12px', scrollbarWidth:'none' },
+  filterPill: { border:'1px solid rgba(127,168,216,.3)', borderRadius:999, padding:'8px 11px', background:'rgba(10,18,40,.62)', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:7 },
+  filterActive: { border:'1px solid #BDF24A', background:'#BDF24A', color:'#10240A', boxShadow:'0 0 16px rgba(189,242,74,.35)' },
+  tinyAvatar: { width:20, height:20, borderRadius:'50%', background:'#0A1228', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flex:'0 0 auto' },
+  sectionTitle: { fontFamily:"'Bungee',sans-serif", color:'#FBEFC8', fontSize:13, textTransform:'uppercase', margin:'3px 0 12px', letterSpacing:'.02em' },
+  play: { color:'#FF6B3D', marginRight:7 },
+  empty: { textAlign:'center', padding:'34px 18px', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, lineHeight:1.45, border:'1px dashed rgba(127,168,216,.35)', borderRadius:18, background:'rgba(14,27,58,.58)' },
+  card: { position:'relative', overflow:'hidden', display:'grid', gridTemplateColumns:'104px 1fr', gap:12, borderRadius:18, padding:12, marginBottom:12, background:'linear-gradient(145deg, rgba(14,27,58,.96), rgba(10,18,40,.96))', boxShadow:'0 13px 28px rgba(0,0,0,.34), inset 0 0 22px rgba(63,169,245,.05)' },
+  foil: { position:'absolute', inset:-20, background:'linear-gradient(115deg, transparent 0 34%, rgba(63,169,245,.18) 42%, rgba(189,242,74,.16) 50%, rgba(255,107,61,.14) 58%, transparent 68%)', backgroundSize:'280% 100%', mixBlendMode:'screen', opacity:.5, pointerEvents:'none', animation:'foil-sweep 5.5s ease-in-out infinite alternate' },
+  trash: { position:'absolute', top:8, right:8, zIndex:3, width:30, height:30, borderRadius:12, border:'1px solid rgba(255,107,61,.35)', background:'rgba(6,10,24,.62)', color:'#FF8A5B', display:'flex', alignItems:'center', justifyContent:'center' },
+  photoWrap: { position:'relative', zIndex:2, width:104, height:104, borderRadius:16, overflow:'hidden', background:'#0A1228', border:'1px solid rgba(251,239,200,.16)' },
+  photo: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
+  fallback: { width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'#BDF24A', background:'radial-gradient(circle at 50% 35%, rgba(189,242,74,.22), rgba(10,18,40,.88))' },
+  recipientBadge: { position:'absolute', top:6, left:6, width:30, height:30, borderRadius:'50%', background:'#0A1228', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', boxShadow:'0 0 0 2px var(--tone), 0 0 12px var(--tone)' },
+  scanBeam: { position:'absolute', left:0, right:0, top:-34, height:34, background:'linear-gradient(180deg, transparent, rgba(63,169,245,.55), transparent)', animation:'scan-down 2.2s linear infinite' },
+  stamp: { position:'absolute', left:10, bottom:10, transform:'rotate(-7deg)', border:'2px solid currentColor', borderRadius:5, padding:'3px 6px 2px', fontFamily:"'Bungee',sans-serif", fontSize:9, lineHeight:1, background:'rgba(6,10,24,.58)', textTransform:'uppercase' },
+  cardInfo: { position:'relative', zIndex:2, minWidth:0, paddingRight:20 },
+  toyTitle: { fontFamily:"'Fredoka',sans-serif", fontSize:16, fontWeight:800, color:'#FBEFC8', lineHeight:1.12, paddingRight:14 },
+  recipientLine: { fontFamily:"'Fredoka',sans-serif", color:'var(--tone)', fontSize:12, fontWeight:800, marginTop:5 },
+  pendingNote: { display:'flex', alignItems:'center', gap:7, color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:700, lineHeight:1.25, marginTop:10 },
+  pulseDot: { width:8, height:8, borderRadius:'50%', background:'#3FA9F5', boxShadow:'0 0 12px rgba(63,169,245,.9)', flex:'0 0 auto', animation:'pulse-dot 1.3s ease-in-out infinite' },
+  priceRow: { display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginTop:10 },
+  priceTag: { position:'relative', display:'inline-flex', alignItems:'center', minHeight:30, padding:'6px 11px 5px 16px', borderRadius:'8px 10px 10px 8px', background:'#FF6B3D', color:'#FBEFC8', fontFamily:"'Bungee',sans-serif", fontSize:13, boxShadow:'3px 3px 0 rgba(0,0,0,.2)' },
+  rewardChip: { borderRadius:999, padding:'6px 9px', background:'rgba(189,242,74,.16)', color:'#BDF24A', border:'1px solid rgba(189,242,74,.34)', fontFamily:"'Bungee',sans-serif", fontSize:10 },
+  estimate: { color:'#FFD84D', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, marginTop:7 },
+  productLink: { display:'inline-block', marginTop:8, color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, textDecoration:'none' },
+  cardFooter: { gridColumn:'1 / -1', position:'relative', zIndex:2, display:'grid', gridTemplateColumns:'1fr 96px', gap:8, marginTop:3 },
+  statusSelect: { width:'100%', borderRadius:12, border:'1px solid rgba(127,168,216,.3)', background:'#081024', color:'#FBEFC8', padding:'10px 9px', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, outline:'none' },
+  editBtn: { border:'1px solid rgba(189,242,74,.4)', borderRadius:12, background:'rgba(189,242,74,.12)', color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800 },
+  success: { background:'rgba(189,242,74,.13)', border:'1px solid rgba(189,242,74,.42)', color:'#BDF24A', borderRadius:14, padding:'10px 12px', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, marginBottom:12, lineHeight:1.35 },
+  err: { color:'#FF8A5B', fontFamily:"'Fredoka',sans-serif", fontSize:12, margin:'0 0 10px', lineHeight:1.35 },
+  overlay: { position:'fixed', inset:0, zIndex:220, background:'rgba(6,10,24,.97)', overflowY:'auto', color:'#FBEFC8' },
+  overlayInner: { minHeight:'100vh', maxWidth:460, margin:'0 auto', padding:'16px 14px 108px' },
+  overlayTop: { position:'sticky', top:0, zIndex:2, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, padding:'10px 0 14px', background:'linear-gradient(180deg, rgba(6,10,24,.98), rgba(6,10,24,.74))', backdropFilter:'blur(12px)' },
+  backBtn: { border:'1px solid rgba(127,168,216,.35)', background:'rgba(10,18,40,.72)', color:'#9FD8FF', borderRadius:999, padding:'9px 12px', fontFamily:"'Fredoka',sans-serif", fontWeight:800 },
+  overlayTitle: { fontFamily:"'Bungee',sans-serif", color:'#FBEFC8', fontSize:18, textShadow:'2px 2px 0 #FF6B3D', textAlign:'right' },
+  flowCard: { border:'2px solid rgba(189,242,74,.38)', borderRadius:20, background:'linear-gradient(180deg,rgba(14,27,58,.92),rgba(10,18,40,.92))', padding:14, boxShadow:'0 16px 34px rgba(0,0,0,.34)' },
+  stepPill: { display:'inline-block', padding:'6px 10px', borderRadius:999, background:'rgba(189,242,74,.14)', color:'#BDF24A', border:'1px solid rgba(189,242,74,.32)', fontFamily:"'Bungee',sans-serif", fontSize:10, marginBottom:10 },
+  question: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:20, fontWeight:800, lineHeight:1.12, marginBottom:6 },
+  helper: { color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, lineHeight:1.35, marginBottom:12 },
+  uploadBox: { width:'100%', minHeight:236, border:'2px dashed rgba(189,242,74,.52)', background:'rgba(189,242,74,.07)', borderRadius:18, padding:14, textAlign:'center', color:'#FBEFC8', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, overflow:'hidden' },
+  uploadPreview: { width:'100%', maxHeight:320, objectFit:'cover', borderRadius:14, border:'1px solid rgba(251,239,200,.18)' },
+  changePhoto: { color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800 },
+  recipientList: { display:'grid', gap:9, marginTop:14 },
+  recipientBtn: { width:'100%', display:'flex', alignItems:'center', gap:11, textAlign:'left', border:'1px solid rgba(127,168,216,.25)', background:'rgba(10,18,40,.72)', color:'#FBEFC8', borderRadius:15, padding:11, fontFamily:"'Fredoka',sans-serif" },
+  recipientActive: { border:'1.5px solid var(--tone)', background:'rgba(189,242,74,.10)', boxShadow:'0 0 16px var(--soft)' },
+  checkMark: { marginLeft:'auto', color:'var(--tone)', fontFamily:"'Bungee',sans-serif", fontSize:16 },
+  input: { width:'100%', padding:'13px 13px', borderRadius:13, border:'1px solid rgba(189,242,74,.28)', background:'rgba(255,255,255,.05)', color:'#FBEFC8', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginTop:10 },
+  details: { marginTop:12, border:'1px dashed rgba(127,168,216,.32)', borderRadius:15, padding:12, background:'rgba(255,255,255,.025)' },
+  detailsSummary: { color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800, cursor:'pointer' },
+  label: { display:'block', fontFamily:"'Fredoka',sans-serif", fontSize:10, color:'#BDF24A', fontWeight:800, letterSpacing:'.08em', margin:'12px 0 6px', textTransform:'uppercase' },
+  select: { width:'100%', padding:'12px', borderRadius:12, border:'1px solid rgba(189,242,74,.28)', background:'#081024', color:'#FBEFC8', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none' },
   row: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 },
-  flowActions: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginTop:10 },
-  backBtn: { padding:'12px', borderRadius:14, border:'1px solid rgba(255,255,255,0.14)', background:'transparent', color:'rgba(255,255,255,0.72)', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  saveBtn: { padding:'12px', borderRadius:14, border:'none', background:'#AAEB3A', color:'#080618', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  saveBtnDisabled: { padding:'12px', borderRadius:14, border:'none', background:'rgba(255,255,255,0.11)', color:'rgba(255,255,255,0.32)', fontSize:13, fontWeight:900, cursor:'not-allowed', fontFamily:"'Nunito',sans-serif" },
-  uploadBox: { border:'1.5px dashed rgba(170,235,58,0.42)', background:'rgba(170,235,58,0.07)', borderRadius:16, padding:16, textAlign:'center', color:'white', marginBottom:12 },
-  uploadPreview: { width:'100%', maxHeight:220, objectFit:'cover', borderRadius:14, border:'1px solid rgba(255,255,255,0.12)', marginBottom:10 },
-  detectionBox: { border:'1px solid rgba(255,216,77,0.26)', background:'rgba(255,216,77,0.08)', borderRadius:12, padding:'10px 12px', marginBottom:12, textAlign:'left' },
-  detectionTitle: { color:'#FFD84D', fontSize:11, fontWeight:900, letterSpacing:.6, marginBottom:5 },
-  detectionText: { color:'rgba(255,255,255,0.72)', fontSize:12, lineHeight:1.35 },
-  success: { background:'rgba(170,235,58,0.13)', border:'1px solid rgba(170,235,58,0.42)', color:'#AAEB3A', borderRadius:12, padding:'10px 12px', fontSize:12, fontWeight:800, marginBottom:12, lineHeight:1.35 },
-  err: { color:'#ff6666', fontSize:12, marginBottom:10, lineHeight:1.35 },
-  sectionTitle: { fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.35)', letterSpacing:1, margin:'2px 0 10px' },
-  empty: { textAlign:'center', padding:'34px 18px', color:'rgba(255,255,255,0.42)', fontSize:13, lineHeight:1.45 },
-  card: { background:'rgba(170,235,58,0.06)', border:'1px solid rgba(170,235,58,0.18)', borderRadius:14, padding:12, marginBottom:10 },
-  cardPending: { background:'linear-gradient(180deg,rgba(43,63,191,0.18),rgba(170,235,58,0.06))', border:'1px solid rgba(170,235,58,0.26)', borderRadius:14, padding:12, marginBottom:10 },
-  cardTop: { display:'flex', gap:12, alignItems:'flex-start' },
-  image: { width:76, height:76, borderRadius:14, objectFit:'cover', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', flexShrink:0 },
-  imageFallback: { width:76, height:76, borderRadius:14, background:'rgba(170,235,58,0.12)', border:'1px solid rgba(170,235,58,0.25)', display:'flex', alignItems:'center', justifyContent:'center', color:'#AAEB3A', flexShrink:0 },
-  cardInfo: { flex:1, minWidth:0 },
-  toyTitle: { color:'white', fontSize:15, fontWeight:900, lineHeight:1.15 },
-  meta: { color:'rgba(255,255,255,0.48)', fontSize:11, marginTop:5 },
-  price: { color:'#AAEB3A', fontSize:13, fontWeight:900, marginTop:7 },
-  estimatedPrice: { color:'#FFD84D', fontSize:12, fontWeight:900, marginTop:7 },
-  badge: { display:'inline-block', padding:'5px 8px', borderRadius:12, background:'rgba(43,63,191,0.42)', border:'1px solid rgba(170,235,58,0.22)', color:'#AAEB3A', fontSize:10, fontWeight:900, marginTop:8 },
-  pendingMsg: { color:'rgba(255,255,255,0.56)', fontSize:11, lineHeight:1.35, marginTop:7 },
-  link: { display:'inline-block', color:'#AAEB3A', fontSize:11, fontWeight:900, marginTop:8, textDecoration:'none' },
-  controls: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 },
-  statusSelect: { width:'100%', padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'#14102c', color:'white', fontSize:12, fontWeight:800, fontFamily:"'Nunito',sans-serif", outline:'none' },
-  smallBtn: { padding:'10px', borderRadius:12, border:'1px solid rgba(170,235,58,0.25)', background:'transparent', color:'#AAEB3A', fontSize:12, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
-  deleteBtn: { padding:'10px', borderRadius:12, border:'1px solid rgba(255,100,100,0.25)', background:'rgba(200,30,30,0.08)', color:'#ff6666', fontSize:12, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif" },
+  saveBtn: { width:'100%', minHeight:54, marginTop:14, border:0, borderRadius:16, background:'linear-gradient(160deg,#D6FF6E,#BDF24A 55%,#7FC916)', color:'#10240A', fontFamily:"'Fredoka',sans-serif", fontSize:16, fontWeight:800, boxShadow:'0 10px 26px rgba(127,201,22,.34), inset 0 2px 0 rgba(255,255,255,.5)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 },
+  disabledBtn: { width:'100%', minHeight:54, marginTop:14, border:0, borderRadius:16, background:'rgba(127,168,216,.16)', color:'rgba(216,224,248,.38)', fontFamily:"'Fredoka',sans-serif", fontSize:16, fontWeight:800 },
+  detectionBox: { border:'1px solid rgba(255,216,77,.28)', background:'rgba(255,216,77,.08)', borderRadius:14, padding:'10px 12px', marginTop:12, textAlign:'left' },
+  detectionTitle: { color:'#FFD84D', fontFamily:"'Bungee',sans-serif", fontSize:10, marginBottom:5 },
+  detectionText: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:12, lineHeight:1.35 },
+  scanner: { position:'fixed', inset:0, zIndex:260, background:'rgba(6,10,24,.98)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 },
+  scannerBox: { width:'100%', maxWidth:360, textAlign:'center' },
+  scannerFrame: { position:'relative', width:'100%', aspectRatio:'1 / 1', borderRadius:22, overflow:'hidden', border:'2px solid #3FA9F5', background:'#081024', boxShadow:'0 0 0 3px rgba(63,169,245,.18), 0 0 34px rgba(63,169,245,.34)' },
+  scannerImg: { width:'100%', height:'100%', objectFit:'cover', opacity:.82 },
+  gridOverlay: { position:'absolute', inset:0, background:'linear-gradient(rgba(63,169,245,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(63,169,245,.18) 1px, transparent 1px)', backgroundSize:'24px 24px' },
+  scannerBeam: { position:'absolute', left:0, right:0, top:-60, height:64, background:'linear-gradient(180deg, transparent, rgba(189,242,74,.68), transparent)', animation:'scan-down 1.2s linear infinite' },
+  orbit: { position:'absolute', inset:24, border:'1.5px dashed rgba(189,242,74,.6)', borderRadius:'50%', animation:'spin-slow 5.5s linear infinite' },
+  ufo: { position:'absolute', top:-17, left:'50%', transform:'translateX(-50%)' },
+  scannerTitle: { fontFamily:"'Bungee',sans-serif", fontSize:18, color:'#FBEFC8', marginTop:18, textShadow:'2px 2px 0 #FF6B3D' },
+  scannerSub: { fontFamily:"'Fredoka',sans-serif", fontSize:13, color:'#9FD8FF', marginTop:6 },
 }
 
-function Icon({ type, size = 22, color = 'currentColor' }) {
+const STARS = Array.from({ length: 70 }, (_, i) => {
+  const tone = i % 17 === 0 ? '#FFD84D' : i % 7 === 0 ? '#BDF24A' : '#EAF0FF'
+  return {
+    x: (i * 37 + 11) % 100,
+    y: (i * 53 + 7) % 100,
+    size: 0.7 + ((i * 17) % 16) / 10,
+    tone,
+    opacity: .25 + ((i * 13) % 60) / 100,
+  }
+})
+
+function Icon({ type, size = 24, color = 'currentColor' }) {
   const common = { width:size, height:size, viewBox:'0 0 24 24', fill:'none', 'aria-hidden':'true' }
-  if (type === 'gift') return <svg {...common}><path d="M5 10h14v10H5V10Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><path d="M12 10v10M5 14h14M8.5 10C6.8 8.7 6.7 6 8.7 6c1.7 0 2.6 2 3.3 4 .7-2 1.6-4 3.3-4 2 0 1.9 2.7.2 4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  if (type === 'link') return <svg {...common}><path d="M9.5 14.5 14.5 9.5M10.5 7.5l1.1-1.1a4 4 0 0 1 5.7 5.7l-1.1 1.1M13.5 16.5l-1.1 1.1a4 4 0 0 1-5.7-5.7l1.1-1.1" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
   if (type === 'camera') return <svg {...common}><path d="M5 8h3l1.4-2h5.2L16 8h3v10H5V8Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="12" cy="13" r="3" stroke={color} strokeWidth="1.8"/></svg>
+  if (type === 'gift') return <svg {...common}><path d="M5 10h14v10H5V10Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><path d="M12 10v10M5 14h14M8.5 10C6.8 8.7 6.7 6 8.7 6c1.7 0 2.6 2 3.3 4 .7-2 1.6-4 3.3-4 2 0 1.9 2.7.2 4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  if (type === 'share') return <svg {...common}><path d="M8.5 12.5 15.5 8M8.5 11.5l7 4.5" stroke={color} strokeWidth="1.8" strokeLinecap="round"/><circle cx="6.5" cy="12" r="2.6" stroke={color} strokeWidth="1.8"/><circle cx="17.5" cy="6.7" r="2.6" stroke={color} strokeWidth="1.8"/><circle cx="17.5" cy="17.3" r="2.6" stroke={color} strokeWidth="1.8"/></svg>
+  if (type === 'chevron') return <svg {...common}><path d="m9 5 7 7-7 7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  if (type === 'trash') return <svg {...common}><path d="M5 7h14M10 11v5M14 11v5M8 7l1-2h6l1 2M7 7l1 13h8l1-13" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  if (type === 'link') return <svg {...common}><path d="M9.5 14.5 14.5 9.5M10.5 7.5l1.1-1.1a4 4 0 0 1 5.7 5.7l-1.1 1.1M13.5 16.5l-1.1 1.1a4 4 0 0 1-5.7-5.7l1.1-1.1" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
   if (type === 'edit') return <svg {...common}><path d="M5 19h4l10-10-4-4L5 15v4Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><path d="m13.5 6.5 4 4" stroke={color} strokeWidth="1.8"/></svg>
+  if (type === 'spark') return <svg {...common}><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3ZM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z" fill={color}/></svg>
   if (type === 'plus') return <svg {...common}><path d="M12 5v14M5 12h14" stroke={color} strokeWidth="2" strokeLinecap="round"/></svg>
-  if (type === 'child') return <svg {...common}><circle cx="12" cy="10" r="4" stroke={color} strokeWidth="1.8"/><path d="M5.5 20c1.1-3.3 3.3-5 6.5-5s5.4 1.7 6.5 5" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
   return <svg {...common}><circle cx="12" cy="12" r="7" stroke={color} strokeWidth="1.8"/></svg>
+}
+
+function ShootingStarIcon({ size = 30 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M18 16C13.6 16.7 9.1 18.9 4.5 22.8" stroke="#8B7FE0" strokeWidth="4" strokeLinecap="round"/>
+      <path d="M20.2 20.1c-3.6 1.1-7 3.2-10.2 6.5" stroke="#3FA9F5" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M15.2 12.2c-3.4.1-6.5.9-9.2 2.5" stroke="#BDF24A" strokeWidth="2" strokeLinecap="round"/>
+      <path d="m27.2 6.2 2.4 5 5.5.8-4 3.9 1 5.5-4.9-2.6-4.9 2.6 1-5.5-4-3.9 5.5-.8 2.4-5Z" fill="#FBEFC8" stroke="#FFD84D" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function UfoIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <path d="M15 20c1.3-6 16.7-6 18 0" fill="#9FD8FF" opacity=".58"/>
+      <path d="M18.5 19.4c.4-3.4 10.6-3.4 11 0" fill="#BDF24A"/>
+      <circle cx="22" cy="17.3" r="1.3" fill="#063B13"/><circle cx="26" cy="17.3" r="1.3" fill="#063B13"/><circle cx="24" cy="15.4" r="1" fill="#063B13"/>
+      <path d="M7 23c4.4-6.4 29.6-6.4 34 0 2 3-5.8 6.8-17 6.8S5 26 7 23Z" fill="#D6DCE8" stroke="#FBEFC8" strokeWidth="2"/>
+      <circle cx="16" cy="25" r="1.7" fill="#FF6B3D"/><circle cx="24" cy="25.7" r="1.7" fill="#FFD84D"/><circle cx="32" cy="25" r="1.7" fill="#3FA9F5"/>
+    </svg>
+  )
+}
+
+function KidAvatar({ kid, tone = '#BDF24A', size = 28 }) {
+  if (kid?.avatar_url) return <img src={kid.avatar_url} alt={kid.nickname} style={{ width:size, height:size, objectFit:'cover', borderRadius:'50%' }} />
+  const letter = (kid?.nickname || 'G').trim().charAt(0).toUpperCase()
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="22" fill="#0A1228" />
+      <path d="M17 14 13 7M31 14l4-7" stroke={tone} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="13" cy="7" r="3.2" fill={tone}/><circle cx="35" cy="7" r="3.2" fill={tone}/>
+      <path d="M9 26c0-9.5 6.5-15 15-15s15 5.5 15 15c0 8.7-6.5 15-15 15S9 34.7 9 26Z" fill={tone}/>
+      <circle cx="18" cy="25" r="5" fill="#fff"/><circle cx="30" cy="25" r="5" fill="#fff"/>
+      <circle cx="18" cy="25" r="2.5" fill="#063B13"/><circle cx="30" cy="25" r="2.5" fill="#063B13"/>
+      <circle cx="24" cy="18" r="3.7" fill="#fff"/><circle cx="24" cy="18" r="2" fill="#063B13"/>
+      <path d="M18 32c3.4 2.5 8.6 2.5 12 0" stroke="#063B13" strokeWidth="2" strokeLinecap="round"/>
+      {!kid && <text x="24" y="29" textAnchor="middle" fontFamily="Fredoka" fontSize="15" fontWeight="800" fill="#063B13">{letter}</text>}
+    </svg>
+  )
 }
 
 function formatPrice(price) {
@@ -98,9 +202,25 @@ function formatPrice(price) {
   return Number(price).toLocaleString('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:0 })
 }
 
+function rewardForPrice(price) {
+  const value = Number(price || 0)
+  if (!value) return 0
+  return Math.max(1, Math.round(value / 1000))
+}
+
+function getTone(kids, childId) {
+  if (!childId) return '#BDF24A'
+  const index = Math.max(0, kids.findIndex(kid => kid.id === childId))
+  return TONES[index % TONES.length]
+}
+
 function getAssignedName(item, kids) {
-  if (!item.child_id) return 'General'
-  return kids.find(kid => kid.id === item.child_id)?.nickname || 'Peque'
+  if (!item.child_id) return 'Lista familiar'
+  return `Para ${kids.find(kid => kid.id === item.child_id)?.nickname || 'Peque'}`
+}
+
+function getKid(kids, childId) {
+  return kids.find(kid => kid.id === childId) || null
 }
 
 function extractTitleFromRavUrl(url) {
@@ -110,7 +230,6 @@ function extractTitleFromRavUrl(url) {
     if (host !== 'ravtoys.com') return ''
     const parts = parsed.pathname.split('/').filter(Boolean)
     const slug = parts[parts.length - 1] || ''
-    if (!slug) return ''
     return slug
       .replace(/-\d+$/g, '')
       .split('-')
@@ -147,7 +266,6 @@ function parseDetectedTitle(text) {
     .filter(line => !/\$|cop|precio|total|iva|ref|sku|cod/i.test(line))
     .filter(line => /[a-záéíóúñ]/i.test(line))
     .filter(line => line.length >= 4 && line.length <= 70)
-
   return lines.sort((a, b) => b.length - a.length)[0] || ''
 }
 
@@ -155,7 +273,6 @@ async function detectTextFromImage(file) {
   if (typeof window === 'undefined' || !window.TextDetector || !window.createImageBitmap) {
     return { supported:false, text:'', detected_title:'', detected_price:null }
   }
-
   const detector = new window.TextDetector()
   const bitmap = await window.createImageBitmap(file)
   const results = await detector.detect(bitmap)
@@ -172,20 +289,21 @@ export default function Wishlist() {
   const [userId, setUserId] = useState('')
   const [kids, setKids] = useState([])
   const [items, setItems] = useState([])
+  const [filter, setFilter] = useState('all')
   const [manualForm, setManualForm] = useState(blankManualForm)
   const [editingId, setEditingId] = useState('')
   const [showFlow, setShowFlow] = useState(false)
-  const [flowStep, setFlowStep] = useState(1)
   const [selectedChildId, setSelectedChildId] = useState('')
-  const [addMethod, setAddMethod] = useState('')
   const [ravLink, setRavLink] = useState('')
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [photoDetecting, setPhotoDetecting] = useState(false)
   const [photoDetection, setPhotoDetection] = useState({ supported:false, tried:false, title:'', price:null })
+  const [optionalTitle, setOptionalTitle] = useState('')
   const [showManual, setShowManual] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const photoInputRef = useRef(null)
@@ -200,12 +318,12 @@ export default function Wishlist() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [router])
 
   const loadKids = async (parentId = userId) => {
     const { data } = await supabase
       .from('child_profiles')
-      .select('id, nickname')
+      .select('id, nickname, avatar, avatar_url')
       .eq('parent_id', parentId)
       .order('nickname', { ascending: true })
     setKids(data || [])
@@ -220,17 +338,22 @@ export default function Wishlist() {
     setItems(data || [])
   }
 
+  const filteredItems = useMemo(() => {
+    if (filter === 'all') return items
+    if (filter === 'general') return items.filter(item => !item.child_id)
+    return items.filter(item => item.child_id === filter)
+  }, [filter, items])
+
   const resetFlow = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setShowFlow(false)
-    setFlowStep(1)
     setSelectedChildId('')
-    setAddMethod('')
     setRavLink('')
     setPhotoFile(null)
     setPhotoPreview('')
     setPhotoDetecting(false)
     setPhotoDetection({ supported:false, tried:false, title:'', price:null })
+    setOptionalTitle('')
     setShowManual(false)
     setManualForm(blankManualForm)
     setEditingId('')
@@ -241,12 +364,6 @@ export default function Wishlist() {
     resetFlow()
     setMessage('')
     setShowFlow(true)
-  }
-
-  const chooseChild = (childId) => {
-    setSelectedChildId(childId)
-    setFlowStep(2)
-    setError('')
   }
 
   const startEdit = (item) => {
@@ -262,11 +379,30 @@ export default function Wishlist() {
     setEditingId(item.id)
     setShowManual(true)
     setShowFlow(true)
-    setFlowStep(2)
-    setAddMethod('manual')
     setError('')
     setMessage('')
-    window.scrollTo({ top: 0, behavior:'smooth' })
+  }
+
+  const choosePhoto = async (file) => {
+    if (!file) return
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+    setPhotoDetection({ supported:false, tried:false, title:'', price:null })
+    setError('')
+    setPhotoDetecting(true)
+    try {
+      const result = await detectTextFromImage(file)
+      setPhotoDetection({
+        supported: result.supported,
+        tried: true,
+        title: result.detected_title || '',
+        price: result.detected_price || null,
+      })
+    } catch {
+      setPhotoDetection({ supported:true, tried:true, title:'', price:null })
+    }
+    setPhotoDetecting(false)
   }
 
   const uploadWishlistPhoto = async (file) => {
@@ -283,6 +419,42 @@ export default function Wishlist() {
     return data.publicUrl
   }
 
+  const savePhotoItem = async () => {
+    if (!photoFile) {
+      setError('Toma o sube una foto del juguete.')
+      return
+    }
+    setSaving(true)
+    setScanning(true)
+    setError('')
+    try {
+      const uploadedUrl = await uploadWishlistPhoto(photoFile)
+      await new Promise(resolve => setTimeout(resolve, 1700))
+      const title = optionalTitle.trim() || photoDetection.title || 'Juguete por confirmar'
+      const { error: insertError } = await supabase.from('wishlist_items').insert({
+        user_id: userId,
+        child_id: selectedChildId || null,
+        title,
+        detected_title: photoDetection.title || null,
+        detected_price: photoDetection.price || null,
+        uploaded_image_url: uploadedUrl,
+        status: 'wanted',
+        source: 'photo',
+        match_status: 'pending_confirmation',
+        updated_at: new Date().toISOString(),
+      })
+      if (insertError) throw insertError
+      resetFlow()
+      setMessage('Listo. RAV está rastreando el juguete y confirmará el precio oficial.')
+      await loadItems()
+    } catch (err) {
+      if (err?.message?.includes('3MB') || err?.message?.includes('imagen válida')) setError(err.message)
+      else setError('No se pudo guardar la foto. Revisa Storage y las columnas de Wishlist.')
+    }
+    setScanning(false)
+    setSaving(false)
+  }
+
   const saveRavLink = async () => {
     if (!isRavUrl(ravLink)) {
       setError('Pega un link válido de ravtoys.com')
@@ -291,7 +463,7 @@ export default function Wishlist() {
     setSaving(true)
     setError('')
     const detectedTitle = extractTitleFromRavUrl(ravLink)
-    const title = detectedTitle || 'Juguete pendiente por confirmar'
+    const title = detectedTitle || optionalTitle.trim() || 'Juguete por confirmar'
     const { error: insertError } = await supabase.from('wishlist_items').insert({
       user_id: userId,
       child_id: selectedChildId || null,
@@ -303,44 +475,11 @@ export default function Wishlist() {
       match_status: 'pending_confirmation',
       updated_at: new Date().toISOString(),
     })
-
-    if (insertError) setError('No se pudo guardar. Revisa que Supabase tenga las nuevas columnas de Wishlist.')
+    if (insertError) setError('No se pudo guardar. Revisa que Supabase tenga las columnas de Wishlist.')
     else {
       resetFlow()
       setMessage('RAV confirmará este juguete antes de compartirlo.')
       await loadItems()
-    }
-    setSaving(false)
-  }
-
-  const savePhotoItem = async () => {
-    if (!photoFile) {
-      setError('Elige o toma una foto del juguete.')
-      return
-    }
-    setSaving(true)
-    setError('')
-    try {
-      const uploadedUrl = await uploadWishlistPhoto(photoFile)
-      const { error: insertError } = await supabase.from('wishlist_items').insert({
-        user_id: userId,
-        child_id: selectedChildId || null,
-        title: photoDetection.title || 'Juguete pendiente por confirmar',
-        detected_title: photoDetection.title || null,
-        detected_price: photoDetection.price || null,
-        uploaded_image_url: uploadedUrl,
-        status: 'wanted',
-        source: 'photo',
-        match_status: 'pending_confirmation',
-        updated_at: new Date().toISOString(),
-      })
-      if (insertError) throw insertError
-      resetFlow()
-      setMessage('Listo. Guardamos la foto y RAV confirmará el juguete y el precio.')
-      await loadItems()
-    } catch (err) {
-      if (err?.message?.includes('3MB') || err?.message?.includes('imagen válida')) setError(err.message)
-      else setError('No se pudo guardar la foto. Revisa Storage y las nuevas columnas de Wishlist.')
     }
     setSaving(false)
   }
@@ -350,16 +489,11 @@ export default function Wishlist() {
       setError('El nombre del juguete es obligatorio')
       return
     }
-    if (manualForm.child_id && !kids.some(kid => kid.id === manualForm.child_id)) {
-      setError('Ese peque no pertenece a tu cuenta')
-      return
-    }
     const cleanPrice = manualForm.price === '' ? null : Number(manualForm.price)
     if (cleanPrice !== null && (Number.isNaN(cleanPrice) || cleanPrice < 0)) {
       setError('El precio debe ser un número válido')
       return
     }
-
     setSaving(true)
     setError('')
     const payload = {
@@ -374,11 +508,9 @@ export default function Wishlist() {
       match_status: 'manual_confirmed',
       updated_at: new Date().toISOString(),
     }
-
     const result = editingId
       ? await supabase.from('wishlist_items').update(payload).eq('id', editingId).eq('user_id', userId)
       : await supabase.from('wishlist_items').insert(payload)
-
     if (result.error) setError('No se pudo guardar. Intenta de nuevo.')
     else {
       resetFlow()
@@ -387,36 +519,12 @@ export default function Wishlist() {
     setSaving(false)
   }
 
-  const choosePhoto = async (file) => {
-    if (!file) return
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
-    setPhotoFile(file)
-    setPhotoPreview(URL.createObjectURL(file))
-    setPhotoDetection({ supported:false, tried:false, title:'', price:null })
-    setError('')
-
-    setPhotoDetecting(true)
-    try {
-      const result = await detectTextFromImage(file)
-      setPhotoDetection({
-        supported: result.supported,
-        tried: true,
-        title: result.detected_title || '',
-        price: result.detected_price || null,
-      })
-    } catch {
-      setPhotoDetection({ supported:true, tried:true, title:'', price:null })
-    }
-    setPhotoDetecting(false)
-  }
-
   const updateStatus = async (item, status) => {
     const { error } = await supabase
       .from('wishlist_items')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', item.id)
       .eq('user_id', userId)
-
     if (!error) setItems(prev => prev.map(current => current.id === item.id ? { ...current, status } : current))
   }
 
@@ -428,216 +536,268 @@ export default function Wishlist() {
       .delete()
       .eq('id', item.id)
       .eq('user_id', userId)
-
     if (error) setError('No se pudo eliminar. Intenta de nuevo.')
     else setItems(prev => prev.filter(current => current.id !== item.id))
   }
 
-  const selectedChildName = selectedChildId ? kids.find(kid => kid.id === selectedChildId)?.nickname : 'General'
+  const shareWishlist = async () => {
+    const text = 'Estoy armando una Wishlist RAV para mis peques.'
+    if (navigator.share) await navigator.share({ title:'Wishlist RAV', text, url:'https://club.ravtoys.com/wishlist' })
+    else {
+      await navigator.clipboard?.writeText('https://club.ravtoys.com/wishlist')
+      setMessage('Link copiado. La lista pública viene en el siguiente paso.')
+    }
+  }
+
+  const selectedKid = getKid(kids, selectedChildId)
+  const selectedTone = getTone(kids, selectedChildId)
 
   return (
     <div style={C.page}>
-      <div style={C.header}>
-        <p style={C.eyebrow}>WISHLIST</p>
-        <p style={C.title}>Wishlist RAV</p>
-        <p style={C.sub}>Guarda sus juguetes favoritos y empieza a construir una lista mágica para compartir más adelante.</p>
+      <div style={C.stars}>
+        {STARS.map((star, i) => <span key={i} style={{ ...C.star, left:`${star.x}%`, top:`${star.y}%`, width:star.size, height:star.size, background:star.tone, opacity:star.opacity, boxShadow:star.tone === '#EAF0FF' ? 'none' : `0 0 8px ${star.tone}` }} />)}
       </div>
+      <span style={{ ...C.nebula, left:-90, top:80, background:'rgba(63,169,245,.7)' }} />
+      <span style={{ ...C.nebula, right:-110, top:120, background:'rgba(255,107,61,.5)' }} />
+      <span style={{ ...C.nebula, left:'35%', bottom:80, background:'rgba(251,239,200,.16)' }} />
+      <span style={C.grain} />
 
-      <div style={C.body}>
-        <div style={C.topActions}>
-          <button style={C.addBtn} onClick={startAdd}>Agregar juguete</button>
-          {showFlow && <button style={C.cancelBtn} onClick={resetFlow}>Cancelar</button>}
+      <header style={C.header}>
+        <div style={C.headerInner}>
+          <div style={C.titleRow}>
+            <ShootingStarIcon />
+            <p style={C.title}>Wishlist RAV</p>
+          </div>
+          <p style={C.sub}>Guarda sus juguetes favoritos y arma una lista mágica para compartir.</p>
         </div>
+      </header>
+
+      <main style={C.body}>
+        <button style={C.captureCard} onClick={startAdd}>
+          <span style={C.captureChip}><Icon type="camera" size={27} /><span style={C.sparkle}><Icon type="spark" size={17} color="#FFD84D" /></span></span>
+          <span>
+            <span style={C.captureTitle}>Agregar juguete</span>
+            <span style={C.captureSub}>Toma una foto de cualquier juguete, en cualquier tienda. RAV lo identifica y confirma el precio.</span>
+          </span>
+          <Icon type="chevron" color="#BDF24A" />
+        </button>
+
+        <section style={C.shareRow}>
+          <div style={C.shareLeft}>
+            <span style={C.goldChip}><Icon type="spark" size={22} color="#0E1B3A" /></span>
+            <div>
+              <p style={C.shareTitle}>Tu lista mágica</p>
+              <p style={C.shareSub}>{items.length} juguetes guardados</p>
+            </div>
+          </div>
+          <button style={C.shareBtn} onClick={shareWishlist}><Icon type="share" size={15} color="currentColor" /> Compartir</button>
+        </section>
 
         {message && <div style={C.success}>{message}</div>}
         {error && !showFlow && <p style={C.err}>{error}</p>}
 
-        {showFlow && (
-          <div style={C.flowPanel}>
-            {error && <p style={C.err}>{error}</p>}
+        <div style={C.filters}>
+          {FILTERS.map(id => (
+            <button key={id} style={{ ...C.filterPill, ...(filter === id ? C.filterActive : {}) }} onClick={() => setFilter(id)}>
+              {id === 'all' ? 'Todos' : 'General'}
+            </button>
+          ))}
+          {kids.map((kid, index) => (
+            <button key={kid.id} style={{ ...C.filterPill, ...(filter === kid.id ? C.filterActive : {}) }} onClick={() => setFilter(kid.id)}>
+              <span style={{ ...C.tinyAvatar, boxShadow:`0 0 0 1.5px ${TONES[index % TONES.length]}` }}><KidAvatar kid={kid} tone={TONES[index % TONES.length]} size={20} /></span>
+              {kid.nickname}
+            </button>
+          ))}
+        </div>
 
-            {flowStep === 1 && (
-              <>
-                <span style={C.stepPill}>PASO 1</span>
-                <p style={C.question}>¿Para quién es este regalo?</p>
-                <div style={C.optionGrid}>
-                  <button style={selectedChildId === '' ? C.optionCardActive : C.optionCard} onClick={() => chooseChild('')}>
-                    <span style={C.optionIcon}><Icon type="gift" /></span>
-                    <span><span style={C.optionTitle}>General</span><span style={C.optionSub}>Para la wishlist familiar.</span></span>
-                  </button>
-                  {kids.map(kid => (
-                    <button key={kid.id} style={selectedChildId === kid.id ? C.optionCardActive : C.optionCard} onClick={() => chooseChild(kid.id)}>
-                      <span style={C.optionIcon}><Icon type="child" /></span>
-                      <span><span style={C.optionTitle}>{kid.nickname}</span><span style={C.optionSub}>Guardar para este peque.</span></span>
-                    </button>
-                  ))}
-                  <button style={C.secondaryOption} onClick={() => router.push('/kids')}>
-                    <span style={C.optionIcon}><Icon type="plus" /></span>
-                    <span><span style={C.optionTitle}>Agregar peque</span><span style={C.optionSub}>Crea un perfil antes de guardar el regalo.</span></span>
-                  </button>
-                </div>
-              </>
-            )}
+        <p style={C.sectionTitle}><span style={C.play}>▸</span>Juguetes guardados</p>
 
-            {flowStep === 2 && (
-              <>
-                <span style={C.stepPill}>PASO 2 · {selectedChildName}</span>
-                <p style={C.question}>¿Qué juguete quieres guardar?</p>
-                <p style={C.helper}>Elige la forma más rápida. RAV lo confirmará después.</p>
-
-                <div style={C.optionGrid}>
-                  <button style={addMethod === 'rav_link' ? C.optionCardActive : C.optionCard} onClick={() => setAddMethod('rav_link')}>
-                    <span style={C.optionIcon}><Icon type="link" /></span>
-                    <span><span style={C.optionTitle}>Pegar link de RAV</span><span style={C.optionSub}>Pega el link del juguete en ravtoys.com.</span></span>
-                  </button>
-                  <button style={addMethod === 'photo' ? C.optionCardActive : C.optionCard} onClick={() => { setAddMethod('photo'); photoInputRef.current?.click() }}>
-                    <span style={C.optionIcon}><Icon type="camera" /></span>
-                    <span><span style={C.optionTitle}>Tomar foto en tienda</span><span style={C.optionSub}>Tómale una foto al juguete o a la etiqueta y RAV lo confirmará.</span></span>
-                  </button>
-                  <button style={addMethod === 'manual' ? C.secondaryOption : C.secondaryOption} onClick={() => { setAddMethod('manual'); setShowManual(true); setManualForm(prev => ({ ...prev, child_id:selectedChildId })) }}>
-                    <span style={C.optionIcon}><Icon type="edit" /></span>
-                    <span><span style={C.optionTitle}>Agregar manualmente</span><span style={C.optionSub}>Solo pruebas internas.</span></span>
-                  </button>
-                </div>
-
-                {addMethod === 'rav_link' && (
-                  <div style={{ marginTop:14 }}>
-                    <label style={C.label}>LINK DE RAVTOYS.COM</label>
-                    <input style={C.input} placeholder="https://ravtoys.com/products/..." value={ravLink} onChange={e => setRavLink(e.target.value)} />
-                    <p style={C.helper}>RAV confirmará este juguete antes de compartirlo.</p>
-                    <div style={C.flowActions}>
-                      <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
-                      <button style={ravLink.trim() ? C.saveBtn : C.saveBtnDisabled} onClick={saveRavLink} disabled={!ravLink.trim() || saving}>{saving ? 'Guardando...' : 'Guardar link'}</button>
-                    </div>
-                  </div>
-                )}
-
-                {addMethod === 'photo' && (
-                  <div style={{ marginTop:14 }}>
-                    <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => choosePhoto(e.target.files?.[0])} />
-                    <button style={C.uploadBox} onClick={() => photoInputRef.current?.click()}>
-                      {photoPreview ? <img src={photoPreview} alt="Foto del juguete" style={C.uploadPreview} /> : <Icon type="camera" size={34} color="#AAEB3A" />}
-                      <p style={{ fontWeight:900, marginTop:8 }}>{photoPreview ? 'Foto lista' : 'Tomar o subir foto'}</p>
-                      <p style={C.helper}>Guardaremos la imagen para que RAV confirme el juguete y el precio.</p>
-                    </button>
-                    {photoPreview && (
-                      <div style={C.detectionBox}>
-                        <p style={C.detectionTitle}>LECTURA DE IMAGEN</p>
-                        {photoDetecting && <p style={C.detectionText}>Intentando leer nombre y precio...</p>}
-                        {!photoDetecting && photoDetection.tried && !photoDetection.supported && <p style={C.detectionText}>Este navegador no permite leer texto de la imagen todavía. Guardaremos la foto para que RAV lo confirme.</p>}
-                        {!photoDetecting && photoDetection.tried && photoDetection.supported && !photoDetection.title && !photoDetection.price && <p style={C.detectionText}>No se detectó texto claro. RAV confirmará el juguete y el precio.</p>}
-                        {!photoDetecting && !!photoDetection.title && <p style={C.detectionText}>Nombre estimado: <strong>{photoDetection.title}</strong></p>}
-                        {!photoDetecting && !!photoDetection.price && <p style={C.detectionText}>Precio estimado: <strong>{formatPrice(photoDetection.price)}</strong></p>}
-                      </div>
-                    )}
-                    <div style={C.flowActions}>
-                      <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
-                      <button style={photoFile ? C.saveBtn : C.saveBtnDisabled} onClick={savePhotoItem} disabled={!photoFile || saving}>{saving ? 'Guardando...' : 'Guardar foto'}</button>
-                    </div>
-                  </div>
-                )}
-
-                {showManual && addMethod === 'manual' && (
-                  <div style={{ marginTop:14 }}>
-                    <p style={C.sectionTitle}>{editingId ? 'EDITAR · SOLO PRUEBAS INTERNAS' : 'MANUAL · SOLO PRUEBAS INTERNAS'}</p>
-                    <label style={C.label}>NOMBRE DEL JUGUETE</label>
-                    <input style={C.input} placeholder="Ej: LEGO, Barbie, dinosaurio..." value={manualForm.title} onChange={e => setManualForm(prev => ({ ...prev, title:e.target.value }))} />
-
-                    <label style={C.label}>IMAGEN URL OPCIONAL</label>
-                    <input style={C.input} placeholder="https://..." value={manualForm.image_url} onChange={e => setManualForm(prev => ({ ...prev, image_url:e.target.value }))} />
-
-                    <div style={C.row}>
-                      <div>
-                        <label style={C.label}>PRECIO OPCIONAL</label>
-                        <input style={C.input} type="number" min="0" placeholder="Ej: 120000" value={manualForm.price} onChange={e => setManualForm(prev => ({ ...prev, price:e.target.value }))} />
-                      </div>
-                      <div>
-                        <label style={C.label}>ESTADO</label>
-                        <select style={C.select} value={manualForm.status} onChange={e => setManualForm(prev => ({ ...prev, status:e.target.value }))}>
-                          <option value="wanted">Deseado</option>
-                          <option value="purchased">Comprado</option>
-                          <option value="unavailable">Agotado</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <label style={C.label}>PRODUCTO URL OPCIONAL</label>
-                    <input style={C.input} placeholder="https://..." value={manualForm.product_url} onChange={e => setManualForm(prev => ({ ...prev, product_url:e.target.value }))} />
-
-                    <label style={C.label}>ASIGNAR A</label>
-                    <select style={C.select} value={manualForm.child_id} onChange={e => setManualForm(prev => ({ ...prev, child_id:e.target.value }))}>
-                      <option value="">General</option>
-                      {kids.map(kid => <option key={kid.id} value={kid.id}>{kid.nickname}</option>)}
-                    </select>
-
-                    <div style={C.flowActions}>
-                      <button style={C.backBtn} onClick={() => setFlowStep(1)}>Atrás</button>
-                      <button style={C.saveBtn} onClick={saveManualItem} disabled={saving}>{saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar prueba'}</button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        <p style={C.sectionTitle}>JUGUETES GUARDADOS</p>
         {loading && <p style={C.empty}>Cargando...</p>}
-        {!loading && items.length === 0 && (
-          <div style={C.panel}>
-            <div style={C.empty}>
-              <p style={{ marginBottom:8, color:'#AAEB3A' }}><Icon type="gift" size={40} color="#AAEB3A" /></p>
-              <p>Aún no hay juguetes guardados.</p>
-              <p style={{ color:'rgba(170,235,58,0.55)', marginTop:4 }}>Agrega el primero en segundos.</p>
-            </div>
+        {!loading && filteredItems.length === 0 && (
+          <div style={C.empty}>
+            <ShootingStarIcon size={52} />
+            <p style={{ color:'#FBEFC8', fontSize:15, fontWeight:800, marginTop:8 }}>Aún no hay juguetes aquí</p>
+            <p>Toca "Agregar juguete" y toma la primera foto.</p>
           </div>
         )}
 
-        {items.map(item => {
-          const isPending = item.match_status === 'pending_confirmation'
+        {filteredItems.map(item => {
+          const pending = item.match_status === 'pending_confirmation'
           const displayImage = item.uploaded_image_url || item.image_url
+          const tone = getTone(kids, item.child_id)
+          const kid = getKid(kids, item.child_id)
+          const officialPrice = item.price || (item.match_status === 'shopify_matched' ? item.detected_price : null)
           return (
-            <div key={item.id} style={isPending ? C.cardPending : C.card}>
-              <div style={C.cardTop}>
-                {displayImage ? (
-                  <img style={C.image} src={displayImage} alt={item.title} onError={e => { e.currentTarget.style.display = 'none' }} />
-                ) : (
-                  <div style={C.imageFallback}><Icon type={item.source === 'rav_link' ? 'link' : 'gift'} color="#AAEB3A" size={30} /></div>
-                )}
-                <div style={C.cardInfo}>
-                  <p style={C.toyTitle}>{item.detected_title || item.title}</p>
-                  <p style={C.meta}>{getAssignedName(item, kids)}</p>
-                  {isPending ? (
-                    <>
-                      <span style={C.badge}>{MATCH_LABELS[item.match_status]}</span>
-                      {item.detected_price !== null && item.detected_price !== undefined && <p style={C.estimatedPrice}>Precio estimado: {formatPrice(item.detected_price)}</p>}
-                      <p style={C.pendingMsg}>El precio oficial será confirmado por RAV.</p>
-                    </>
-                  ) : (
-                    <>
-                      {item.price !== null && item.price !== undefined && <p style={C.price}>{formatPrice(item.price)}</p>}
-                      <span style={C.badge}>{STATUS_LABELS[item.status] || 'Deseado'}</span>
-                    </>
-                  )}
-                  {item.product_url && <a style={C.link} href={item.product_url} target="_blank" rel="noreferrer">Ver producto</a>}
-                </div>
+            <article key={item.id} style={{ ...C.card, '--tone':tone, '--soft':`${tone}33`, border:`1.5px solid ${pending ? '#3FA9F5' : '#BDF24A'}`, boxShadow:`0 13px 28px rgba(0,0,0,.34), 0 0 18px ${pending ? 'rgba(63,169,245,.24)' : 'rgba(189,242,74,.22)'}` }}>
+              <span style={C.foil} />
+              <button style={C.trash} onClick={() => deleteItem(item)} aria-label="Eliminar"><Icon type="trash" size={16} color="currentColor" /></button>
+
+              <div style={C.photoWrap}>
+                {displayImage ? <img style={{ ...C.photo, filter:pending ? 'saturate(.72)' : 'none' }} src={displayImage} alt={item.title} /> : <div style={C.fallback}><Icon type={item.source === 'rav_link' ? 'link' : 'gift'} size={34} color="#BDF24A" /></div>}
+                <span style={C.recipientBadge}><KidAvatar kid={kid} tone={tone} size={30} /></span>
+                {pending && <span style={C.scanBeam} />}
+                <span style={{ ...C.stamp, color:pending ? '#3FA9F5' : '#BDF24A' }}>{pending ? 'En orbita' : 'Confirmado'}</span>
               </div>
 
-              <div style={C.controls}>
-                <select style={C.statusSelect} value={item.status || 'wanted'} onChange={e => updateStatus(item, e.target.value)}>
-                  <option value="wanted">Deseado</option>
-                  <option value="purchased">Comprado</option>
-                  <option value="unavailable">Agotado</option>
-                </select>
-                <button style={C.smallBtn} onClick={() => startEdit(item)}>Editar</button>
-                <button style={C.deleteBtn} onClick={() => deleteItem(item)}>Eliminar</button>
+              <div style={C.cardInfo}>
+                <p style={C.toyTitle}>{pending ? (item.detected_title || item.title || 'Juguete por confirmar') : (item.title || item.detected_title)}</p>
+                <p style={C.recipientLine}>{getAssignedName(item, kids)}</p>
+                {pending ? (
+                  <>
+                    <p style={C.pendingNote}><span style={C.pulseDot} /> RAV está confirmando el precio oficial...</p>
+                    {item.detected_price !== null && item.detected_price !== undefined && <p style={C.estimate}>Precio estimado: {formatPrice(item.detected_price)}</p>}
+                  </>
+                ) : (
+                  <div style={C.priceRow}>
+                    {officialPrice ? <span style={C.priceTag}>{formatPrice(officialPrice)}</span> : <span style={C.pendingNote}><span style={C.pulseDot} /> Precio pendiente</span>}
+                    {officialPrice && <span style={C.rewardChip}>★ +{rewardForPrice(officialPrice)}</span>}
+                  </div>
+                )}
+                {item.product_url && <a style={C.productLink} href={item.product_url} target="_blank" rel="noreferrer">Ver producto</a>}
               </div>
-            </div>
+
+              <div style={C.cardFooter}>
+                <select style={C.statusSelect} value={item.status || 'wanted'} onChange={e => updateStatus(item, e.target.value)}>
+                  <option value="wanted">{STATUS_LABELS.wanted}</option>
+                  <option value="reserved">{STATUS_LABELS.reserved}</option>
+                  <option value="purchased">{STATUS_LABELS.purchased}</option>
+                </select>
+                <button style={C.editBtn} onClick={() => startEdit(item)}>Editar</button>
+              </div>
+            </article>
           )
         })}
-      </div>
+      </main>
+
+      {showFlow && (
+        <div style={C.overlay}>
+          <div style={C.overlayInner}>
+            <div style={C.overlayTop}>
+              <button style={C.backBtn} onClick={resetFlow}>‹ Volver</button>
+              <p style={C.overlayTitle}>Agregar juguete</p>
+            </div>
+
+            <section style={C.flowCard}>
+              {error && <p style={C.err}>{error}</p>}
+              <span style={C.stepPill}>Paso 1</span>
+              <p style={C.question}>Toma una foto del juguete</p>
+              <p style={C.helper}>En la tienda, en una caja, en internet: donde sea. RAV lo identifica por ti.</p>
+              <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => choosePhoto(e.target.files?.[0])} />
+              <button style={C.uploadBox} onClick={() => photoInputRef.current?.click()}>
+                {photoPreview ? <img src={photoPreview} alt="Foto del juguete" style={C.uploadPreview} /> : <Icon type="camera" size={44} color="#BDF24A" />}
+                <span style={C.changePhoto}>{photoPreview ? 'Cambiar foto' : 'Tomar o subir foto'}</span>
+              </button>
+
+              {photoPreview && (
+                <div style={C.detectionBox}>
+                  <p style={C.detectionTitle}>Lectura de imagen</p>
+                  {photoDetecting && <p style={C.detectionText}>Intentando leer nombre y precio...</p>}
+                  {!photoDetecting && photoDetection.tried && !photoDetection.supported && <p style={C.detectionText}>Este navegador no permite leer texto todavía. Guardaremos la foto para que RAV lo confirme.</p>}
+                  {!photoDetecting && photoDetection.tried && photoDetection.supported && !photoDetection.title && !photoDetection.price && <p style={C.detectionText}>No se detectó texto claro. RAV confirmará el juguete y el precio.</p>}
+                  {!photoDetecting && !!photoDetection.title && <p style={C.detectionText}>Nombre estimado: <strong>{photoDetection.title}</strong></p>}
+                  {!photoDetecting && !!photoDetection.price && <p style={C.detectionText}>Precio estimado: <strong>{formatPrice(photoDetection.price)}</strong></p>}
+                </div>
+              )}
+
+              <span style={{ ...C.stepPill, marginTop:16 }}>Paso 2</span>
+              <p style={C.question}>¿Para quién es este regalo?</p>
+              <div style={C.recipientList}>
+                <button style={{ ...C.recipientBtn, ...(selectedChildId === '' ? C.recipientActive : {}), '--tone':'#BDF24A', '--soft':'rgba(189,242,74,.22)' }} onClick={() => setSelectedChildId('')}>
+                  <span style={{ ...C.recipientBadge, position:'static', boxShadow:'0 0 0 2px #BDF24A' }}><Icon type="gift" size={17} color="#BDF24A" /></span>
+                  <span><strong>General</strong><br /><small style={{ color:'#7FA8D8' }}>Para la wishlist familiar.</small></span>
+                  {selectedChildId === '' && <span style={C.checkMark}>✓</span>}
+                </button>
+                {kids.map((kid, index) => {
+                  const tone = TONES[index % TONES.length]
+                  return (
+                    <button key={kid.id} style={{ ...C.recipientBtn, ...(selectedChildId === kid.id ? C.recipientActive : {}), '--tone':tone, '--soft':`${tone}33` }} onClick={() => setSelectedChildId(kid.id)}>
+                      <span style={{ ...C.recipientBadge, position:'static', boxShadow:`0 0 0 2px ${tone}` }}><KidAvatar kid={kid} tone={tone} size={30} /></span>
+                      <span><strong>{kid.nickname}</strong><br /><small style={{ color:'#7FA8D8' }}>Guardar para este peque.</small></span>
+                      {selectedChildId === kid.id && <span style={C.checkMark}>✓</span>}
+                    </button>
+                  )
+                })}
+                <button style={{ ...C.recipientBtn, border:'1px dashed rgba(127,168,216,.38)' }} onClick={() => router.push('/kids')}>
+                  <span style={{ ...C.recipientBadge, position:'static', boxShadow:'0 0 0 2px #7FA8D8' }}><Icon type="plus" size={17} color="#9FD8FF" /></span>
+                  <span><strong>Agregar peque</strong><br /><small style={{ color:'#7FA8D8' }}>Crear perfil explorador.</small></span>
+                </button>
+              </div>
+
+              <input style={C.input} placeholder="¿Qué juguete es? (opcional)" value={optionalTitle} onChange={e => setOptionalTitle(e.target.value)} />
+
+              <button style={photoFile ? C.saveBtn : C.disabledBtn} onClick={savePhotoItem} disabled={!photoFile || saving}>
+                <Icon type="spark" size={18} color="currentColor" /> {saving ? 'Guardando...' : 'Guardar en la wishlist'}
+              </button>
+
+              <details style={C.details}>
+                <summary style={C.detailsSummary}>Opciones internas: link de RAV o manual</summary>
+                <label style={C.label}>Link de ravtoys.com</label>
+                <input style={C.input} placeholder="https://ravtoys.com/products/..." value={ravLink} onChange={e => setRavLink(e.target.value)} />
+                <button style={ravLink.trim() ? C.saveBtn : C.disabledBtn} onClick={saveRavLink} disabled={!ravLink.trim() || saving}>Guardar link de RAV</button>
+
+                <label style={C.label}>Manual · solo pruebas internas</label>
+                <input style={C.input} placeholder="Nombre del juguete" value={manualForm.title} onChange={e => setManualForm(prev => ({ ...prev, title:e.target.value }))} />
+                <input style={C.input} placeholder="Imagen URL opcional" value={manualForm.image_url} onChange={e => setManualForm(prev => ({ ...prev, image_url:e.target.value }))} />
+                <div style={C.row}>
+                  <input style={C.input} type="number" min="0" placeholder="Precio" value={manualForm.price} onChange={e => setManualForm(prev => ({ ...prev, price:e.target.value }))} />
+                  <select style={{ ...C.select, marginTop:10 }} value={manualForm.status} onChange={e => setManualForm(prev => ({ ...prev, status:e.target.value }))}>
+                    <option value="wanted">Deseado</option>
+                    <option value="reserved">Reservado</option>
+                    <option value="purchased">Comprado</option>
+                  </select>
+                </div>
+                <input style={C.input} placeholder="Producto URL opcional" value={manualForm.product_url} onChange={e => setManualForm(prev => ({ ...prev, product_url:e.target.value }))} />
+                <select style={C.select} value={manualForm.child_id} onChange={e => setManualForm(prev => ({ ...prev, child_id:e.target.value }))}>
+                  <option value="">General</option>
+                  {kids.map(kid => <option key={kid.id} value={kid.id}>{kid.nickname}</option>)}
+                </select>
+                <button style={manualForm.title.trim() ? C.saveBtn : C.disabledBtn} onClick={saveManualItem} disabled={!manualForm.title.trim() || saving}>{editingId ? 'Guardar cambios' : 'Guardar prueba'}</button>
+              </details>
+            </section>
+          </div>
+        </div>
+      )}
+
+      {scanning && (
+        <div style={C.scanner}>
+          <div style={C.scannerBox}>
+            <div style={C.scannerFrame}>
+              {photoPreview && <img src={photoPreview} alt="RAV rastreando" style={C.scannerImg} />}
+              <span style={C.gridOverlay} />
+              <span style={C.scannerBeam} />
+              <span style={C.orbit}><span style={C.ufo}><UfoIcon /></span></span>
+            </div>
+            <p style={C.scannerTitle}>Rastreando en el RAV Universo...</p>
+            <p style={C.scannerSub}>Identificando tu juguete y su precio oficial</p>
+          </div>
+        </div>
+      )}
 
       <Navbar active="wishlist" />
+
+      <style jsx global>{`
+        @keyframes foil-sweep {
+          from { background-position: 0% 50%; }
+          to { background-position: 100% 50%; }
+        }
+        @keyframes scan-down {
+          from { transform: translateY(0); }
+          to { transform: translateY(170px); }
+        }
+        @keyframes pulse-dot {
+          0%, 100% { transform: scale(.78); opacity: .55; }
+          50% { transform: scale(1.1); opacity: 1; }
+        }
+        @keyframes spin-slow {
+          to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+        }
+        @media (max-width: 380px) {
+          .wishlist-card { grid-template-columns: 92px 1fr !important; }
+        }
+      `}</style>
     </div>
   )
 }
