@@ -144,7 +144,7 @@ const C = {
   planetInput: { width:'100%', height:28, border:'1px solid rgba(124,92,224,.45)', borderRadius:8, background:'rgba(255,255,255,.45)', color:'#15233E', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, padding:'0 7px' },
   stampHead: { position:'relative', zIndex:3, display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, padding:'8px 0 5px' },
   stampTitle: { display:'flex', alignItems:'center', gap:6, color:'#2F4D78', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:900 },
-  stampCount: { color:'var(--tone)', fontFamily:"'Bungee',sans-serif", fontSize:12 },
+  stampCount: { color:'#15233E', fontFamily:"'Bungee',sans-serif", fontSize:12 },
   passportProgress: { position:'relative', zIndex:3, height:6, borderRadius:999, background:'rgba(40,64,110,.14)', overflow:'hidden', marginBottom:7 },
   passportProgressFill: { height:'100%', width:'var(--progress)', background:'var(--tone)', borderRadius:999 },
   stampGrid: { position:'relative', zIndex:3, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'7px 5px', padding:'0 0 8px' },
