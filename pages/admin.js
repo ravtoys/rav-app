@@ -189,6 +189,7 @@ function getWishlistSourceLabel(source) {
     rav_link: 'Link RAV',
     photo: 'Foto en tienda',
     manual: 'Manual',
+    shopify: 'Catálogo Shopify',
   }
   return labels[source] || 'Manual'
 }
