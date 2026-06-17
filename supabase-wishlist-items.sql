@@ -17,8 +17,9 @@ create table if not exists public.wishlist_items (
   sku text null,
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now(),
-  constraint wishlist_items_status_check check (status in ('wanted', 'purchased', 'unavailable')),
+  constraint wishlist_items_status_check check (status in ('wanted', 'reserved', 'purchased', 'unavailable')),
   constraint wishlist_items_match_status_check check (match_status in ('manual_confirmed', 'pending_confirmation', 'shopify_matched')),
+  constraint wishlist_items_source_check check (source in ('manual', 'photo', 'rav_link', 'shopify')),
   constraint wishlist_items_price_check check (price is null or price >= 0)
 );
 
