@@ -61,6 +61,9 @@ const C = {
   shareTitle: { fontFamily:"'Fredoka',sans-serif", fontSize:15, fontWeight:800, color:'#FBEFC8' },
   shareSub: { fontFamily:"'Nunito',sans-serif", fontSize:11, color:'#7FA8D8', marginTop:2 },
   shareBtn: { border:0, borderRadius:999, padding:'9px 11px', background:'#3FA9F5', color:'#06101F', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, display:'flex', alignItems:'center', gap:6, flex:'0 0 auto' },
+  shareLinkBox: { display:'flex', gap:8, alignItems:'center', margin:'-4px 0 13px', padding:10, borderRadius:14, background:'rgba(10,18,40,.72)', border:'1px solid rgba(63,169,245,.28)' },
+  shareLinkText: { flex:1, minWidth:0, color:'#9FD8FF', fontFamily:"'Nunito',sans-serif", fontSize:11, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  copySmallBtn: { border:'1px solid rgba(189,242,74,.35)', borderRadius:11, padding:'8px 9px', background:'rgba(189,242,74,.1)', color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:11, fontWeight:800 },
   filters: { display:'flex', gap:8, overflowX:'auto', padding:'0 1px 12px', scrollbarWidth:'none' },
   filterPill: { border:'1px solid rgba(127,168,216,.3)', borderRadius:999, padding:'8px 11px', background:'rgba(10,18,40,.62)', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:7 },
   filterActive: { border:'1px solid #BDF24A', background:'#BDF24A', color:'#10240A', boxShadow:'0 0 16px rgba(189,242,74,.35)' },
@@ -119,6 +122,13 @@ const C = {
   detectionBox: { border:'1px solid rgba(255,216,77,.28)', background:'rgba(255,216,77,.08)', borderRadius:14, padding:'10px 12px', marginTop:12, textAlign:'left' },
   detectionTitle: { color:'#FFD84D', fontFamily:"'Bungee',sans-serif", fontSize:10, marginBottom:5 },
   detectionText: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:12, lineHeight:1.35 },
+  catalogBox: { marginTop:12, border:'1px solid rgba(63,169,245,.32)', background:'rgba(63,169,245,.07)', borderRadius:15, padding:12 },
+  catalogResults: { display:'grid', gap:9, marginTop:10 },
+  catalogCard: { width:'100%', display:'grid', gridTemplateColumns:'56px 1fr auto', gap:10, alignItems:'center', textAlign:'left', border:'1px solid rgba(127,168,216,.24)', borderRadius:14, padding:9, background:'rgba(10,18,40,.72)', color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif" },
+  catalogImg: { width:56, height:56, borderRadius:12, objectFit:'cover', background:'#0A1228', border:'1px solid rgba(251,239,200,.16)' },
+  catalogTitle: { fontSize:13, fontWeight:800, lineHeight:1.15 },
+  catalogPrice: { fontSize:11, color:'#FFD84D', fontWeight:800, marginTop:4 },
+  catalogPick: { border:0, borderRadius:999, padding:'8px 9px', background:'#BDF24A', color:'#10240A', fontSize:11, fontWeight:900 },
   scanner: { position:'fixed', inset:0, zIndex:260, background:'rgba(6,10,24,.98)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 },
   scannerBox: { width:'100%', maxWidth:360, textAlign:'center' },
   scannerFrame: { position:'relative', width:'100%', aspectRatio:'1 / 1', borderRadius:22, overflow:'hidden', border:'2px solid #3FA9F5', background:'#081024', boxShadow:'0 0 0 3px rgba(63,169,245,.18), 0 0 34px rgba(63,169,245,.34)' },
@@ -147,6 +157,8 @@ function Icon({ type, size = 24, color = 'currentColor' }) {
   if (type === 'camera') return <svg {...common}><path d="M5 8h3l1.4-2h5.2L16 8h3v10H5V8Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="12" cy="13" r="3" stroke={color} strokeWidth="1.8"/></svg>
   if (type === 'gift') return <svg {...common}><path d="M5 10h14v10H5V10Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/><path d="M12 10v10M5 14h14M8.5 10C6.8 8.7 6.7 6 8.7 6c1.7 0 2.6 2 3.3 4 .7-2 1.6-4 3.3-4 2 0 1.9 2.7.2 4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
   if (type === 'share') return <svg {...common}><path d="M8.5 12.5 15.5 8M8.5 11.5l7 4.5" stroke={color} strokeWidth="1.8" strokeLinecap="round"/><circle cx="6.5" cy="12" r="2.6" stroke={color} strokeWidth="1.8"/><circle cx="17.5" cy="6.7" r="2.6" stroke={color} strokeWidth="1.8"/><circle cx="17.5" cy="17.3" r="2.6" stroke={color} strokeWidth="1.8"/></svg>
+  if (type === 'search') return <svg {...common}><circle cx="10.5" cy="10.5" r="5.5" stroke={color} strokeWidth="1.8"/><path d="m15 15 4 4" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
+  if (type === 'cart') return <svg {...common}><path d="M5 5h2l1.2 9h8.6L19 8H8" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="10" cy="18" r="1.4" fill={color}/><circle cx="17" cy="18" r="1.4" fill={color}/></svg>
   if (type === 'chevron') return <svg {...common}><path d="m9 5 7 7-7 7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
   if (type === 'trash') return <svg {...common}><path d="M5 7h14M10 11v5M14 11v5M8 7l1-2h6l1 2M7 7l1 13h8l1-13" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
   if (type === 'link') return <svg {...common}><path d="M9.5 14.5 14.5 9.5M10.5 7.5l1.1-1.1a4 4 0 0 1 5.7 5.7l-1.1 1.1M13.5 16.5l-1.1 1.1a4 4 0 0 1-5.7-5.7l1.1-1.1" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -295,6 +307,10 @@ export default function Wishlist() {
   const [showFlow, setShowFlow] = useState(false)
   const [selectedChildId, setSelectedChildId] = useState('')
   const [ravLink, setRavLink] = useState('')
+  const [catalogQuery, setCatalogQuery] = useState('')
+  const [catalogResults, setCatalogResults] = useState([])
+  const [catalogLoading, setCatalogLoading] = useState(false)
+  const [catalogMessage, setCatalogMessage] = useState('')
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [photoDetecting, setPhotoDetecting] = useState(false)
@@ -304,6 +320,8 @@ export default function Wishlist() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [shareUrl, setShareUrl] = useState('')
+  const [shareLoading, setShareLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const photoInputRef = useRef(null)
@@ -349,6 +367,10 @@ export default function Wishlist() {
     setShowFlow(false)
     setSelectedChildId('')
     setRavLink('')
+    setCatalogQuery('')
+    setCatalogResults([])
+    setCatalogLoading(false)
+    setCatalogMessage('')
     setPhotoFile(null)
     setPhotoPreview('')
     setPhotoDetecting(false)
@@ -484,6 +506,60 @@ export default function Wishlist() {
     setSaving(false)
   }
 
+  const searchCatalog = async () => {
+    if (catalogQuery.trim().length < 2) {
+      setCatalogMessage('Escribe al menos 2 letras para buscar.')
+      return
+    }
+
+    setCatalogLoading(true)
+    setCatalogMessage('')
+    setCatalogResults([])
+
+    try {
+      const res = await fetch(`/api/shopify/search-products?q=${encodeURIComponent(catalogQuery.trim())}`)
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'No se pudo buscar en Shopify')
+      setCatalogResults(json.products || [])
+      if (json.notConfigured) setCatalogMessage('Falta conectar el token de Shopify en Vercel.')
+      else if (!json.products?.length) setCatalogMessage('No encontramos productos con ese nombre.')
+    } catch {
+      setCatalogMessage('No se pudo buscar en el catálogo RAV.')
+    }
+
+    setCatalogLoading(false)
+  }
+
+  const saveCatalogProduct = async (product) => {
+    setSaving(true)
+    setError('')
+
+    const { error: insertError } = await supabase.from('wishlist_items').insert({
+      user_id: userId,
+      child_id: selectedChildId || null,
+      title: product.title,
+      image_url: product.image_url || null,
+      price: product.price,
+      product_url: product.product_url,
+      status: 'wanted',
+      source: 'shopify',
+      match_status: 'shopify_matched',
+      shopify_product_id: product.product_id,
+      shopify_variant_id: product.variant_id || null,
+      sku: product.sku || null,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (insertError) setError('No se pudo guardar el producto Shopify. Revisa la tabla Wishlist.')
+    else {
+      resetFlow()
+      setMessage('Producto RAV agregado a tu Wishlist.')
+      await loadItems()
+    }
+
+    setSaving(false)
+  }
+
   const saveManualItem = async () => {
     if (!manualForm.title.trim()) {
       setError('El nombre del juguete es obligatorio')
@@ -541,12 +617,29 @@ export default function Wishlist() {
   }
 
   const shareWishlist = async () => {
-    const text = 'Estoy armando una Wishlist RAV para mis peques.'
-    if (navigator.share) await navigator.share({ title:'Wishlist RAV', text, url:'https://club.ravtoys.com/wishlist' })
-    else {
-      await navigator.clipboard?.writeText('https://club.ravtoys.com/wishlist')
-      setMessage('Link copiado. La lista pública viene en el siguiente paso.')
+    setShareLoading(true)
+    setError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/wishlist/share', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'No se pudo crear el link')
+      setShareUrl(json.url)
+      const text = 'Esta es nuestra Wishlist RAV.'
+      if (navigator.share) await navigator.share({ title:'Wishlist RAV', text, url:json.url })
+      else {
+        await navigator.clipboard?.writeText(json.url)
+        setMessage('Link público copiado.')
+      }
+    } catch {
+      setError('No se pudo crear el link público. Revisa que Supabase tenga las columnas nuevas.')
     }
+    setShareLoading(false)
   }
 
   const selectedKid = getKid(kids, selectedChildId)
@@ -590,8 +683,15 @@ export default function Wishlist() {
               <p style={C.shareSub}>{items.length} juguetes guardados</p>
             </div>
           </div>
-          <button style={C.shareBtn} onClick={shareWishlist}><Icon type="share" size={15} color="currentColor" /> Compartir</button>
+          <button style={C.shareBtn} onClick={shareWishlist} disabled={shareLoading}><Icon type="share" size={15} color="currentColor" /> {shareLoading ? 'Creando...' : 'Compartir'}</button>
         </section>
+
+        {shareUrl && (
+          <div style={C.shareLinkBox}>
+            <span style={C.shareLinkText}>{shareUrl}</span>
+            <button style={C.copySmallBtn} onClick={async () => { await navigator.clipboard?.writeText(shareUrl); setMessage('Link público copiado.') }}>Copiar</button>
+          </div>
+        )}
 
         {message && <div style={C.success}>{message}</div>}
         {error && !showFlow && <p style={C.err}>{error}</p>}
@@ -730,7 +830,30 @@ export default function Wishlist() {
               </button>
 
               <details style={C.details}>
-                <summary style={C.detailsSummary}>Opciones internas: link de RAV o manual</summary>
+                <summary style={C.detailsSummary}>Buscar en catálogo RAV o usar opciones internas</summary>
+                <div style={C.catalogBox}>
+                  <label style={C.label}>Buscar producto de ravtoys.com</label>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 92px', gap:8 }}>
+                    <input style={{ ...C.input, marginTop:0 }} placeholder="Ej: LEGO, Barbie, dinosaurio..." value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') searchCatalog() }} />
+                    <button style={{ ...C.catalogPick, borderRadius:13 }} onClick={searchCatalog} disabled={catalogLoading}>{catalogLoading ? '...' : 'Buscar'}</button>
+                  </div>
+                  {catalogMessage && <p style={{ ...C.detectionText, marginTop:9 }}>{catalogMessage}</p>}
+                  {!!catalogResults.length && (
+                    <div style={C.catalogResults}>
+                      {catalogResults.map(product => (
+                        <button key={product.product_id} style={C.catalogCard} onClick={() => saveCatalogProduct(product)} disabled={saving}>
+                          {product.image_url ? <img src={product.image_url} alt={product.image_alt || product.title} style={C.catalogImg} /> : <span style={C.catalogImg} />}
+                          <span>
+                            <span style={C.catalogTitle}>{product.title}</span>
+                            <span style={C.catalogPrice}>{product.price ? formatPrice(product.price) : 'Precio por confirmar'}</span>
+                          </span>
+                          <span style={C.catalogPick}><Icon type="cart" size={13} color="currentColor" /> Agregar</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <label style={C.label}>Link de ravtoys.com</label>
                 <input style={C.input} placeholder="https://ravtoys.com/products/..." value={ravLink} onChange={e => setRavLink(e.target.value)} />
                 <button style={ravLink.trim() ? C.saveBtn : C.disabledBtn} onClick={saveRavLink} disabled={!ravLink.trim() || saving}>Guardar link de RAV</button>
