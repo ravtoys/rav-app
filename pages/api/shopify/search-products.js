@@ -6,7 +6,8 @@ function getShopDomain() {
 }
 
 function normalizeProduct(product) {
-  const variant = product.variants?.edges?.[0]?.node || {}
+  const variants = (product.variants?.edges || []).map(edge => edge.node).filter(Boolean)
+  const variant = variants.find(current => current.availableForSale) || variants[0] || {}
   const price = product.priceRange?.minVariantPrice
   return {
     product_id: product.id,
@@ -19,7 +20,7 @@ function normalizeProduct(product) {
     price: price?.amount ? Number(price.amount) : null,
     currency: price?.currencyCode || 'COP',
     product_url: product.onlineStoreUrl || `https://ravtoys.com/products/${product.handle}`,
-    available: variant.availableForSale !== false,
+    available: product.availableForSale !== false && variant.availableForSale !== false,
   }
 }
 
@@ -44,13 +45,14 @@ export default async function handler(req, res) {
 
   const graphql = `
     query SearchProducts($query: String!) {
-      search(first: 8, query: $query, types: PRODUCT, prefix: LAST) {
+      search(first: 12, query: $query, types: PRODUCT, prefix: LAST, unavailableProducts: HIDE) {
         edges {
           node {
             ... on Product {
               id
               title
               handle
+              availableForSale
               onlineStoreUrl
               featuredImage {
                 url
@@ -62,7 +64,7 @@ export default async function handler(req, res) {
                   currencyCode
                 }
               }
-              variants(first: 1) {
+              variants(first: 10) {
                 edges {
                   node {
                     id
@@ -100,6 +102,8 @@ export default async function handler(req, res) {
       .map(edge => edge.node)
       .filter(Boolean)
       .map(normalizeProduct)
+      .filter(product => product.available)
+      .slice(0, 8)
 
     return res.status(200).json({ products })
   } catch (error) {
