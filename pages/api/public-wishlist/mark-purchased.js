@@ -33,10 +33,22 @@ export default async function handler(req, res) {
       })
       .eq('id', itemId)
       .eq('user_id', profile.id)
+      .neq('status', 'purchased')
       .select('id, status')
       .single()
 
     if (itemError || !item) {
+      const { data: existing } = await supabase
+        .from('wishlist_items')
+        .select('id, status')
+        .eq('id', itemId)
+        .eq('user_id', profile.id)
+        .single()
+
+      if (existing?.status === 'purchased') {
+        return res.status(409).json({ error: 'Este regalo ya fue marcado como comprado.' })
+      }
+
       return res.status(404).json({ error: 'Wishlist item not found' })
     }
 
