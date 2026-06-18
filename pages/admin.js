@@ -69,6 +69,18 @@ const C = {
   wishlistFallback: { width:44, height:44, borderRadius:12, background:'rgba(170,235,58,0.1)', border:'1px solid rgba(170,235,58,0.22)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
   wishlistLink: { display:'inline-block', color:'#AAEB3A', fontSize:10, fontWeight:900, marginTop:5, textDecoration:'none' },
   wishlistNote: { color:'rgba(255,255,255,0.42)', fontSize:10, lineHeight:1.3, marginTop:5 },
+  wishlistQueueCard: { borderTop:'1px solid rgba(255,255,255,0.08)', padding:'12px 0', display:'grid', gridTemplateColumns:'64px 1fr', gap:12 },
+  wishlistQueuePhoto: { width:64, height:64, borderRadius:14, objectFit:'cover', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)' },
+  wishlistQueueFallback: { width:64, height:64, borderRadius:14, background:'rgba(170,235,58,0.1)', border:'1px solid rgba(170,235,58,0.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 },
+  wishlistActionRow: { display:'flex', gap:8, flexWrap:'wrap', marginTop:9 },
+  wishlistSearchRow: { display:'grid', gridTemplateColumns:'1fr auto', gap:8, marginTop:10 },
+  miniInput: { minWidth:0, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
+  miniBtn: { padding:'9px 11px', borderRadius:10, border:'none', background:'#AAEB3A', color:'#080618', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  secondaryBtn: { padding:'9px 11px', borderRadius:10, border:'1px solid rgba(170,235,58,0.28)', background:'transparent', color:'#AAEB3A', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  dangerBtn: { padding:'9px 11px', borderRadius:10, border:'1px solid rgba(255,102,102,0.35)', background:'rgba(255,102,102,0.08)', color:'#ff6666', fontSize:11, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
+  productResults: { display:'grid', gap:8, marginTop:10 },
+  productResult: { display:'grid', gridTemplateColumns:'44px 1fr auto', alignItems:'center', gap:9, padding:8, borderRadius:12, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' },
+  productResultImg: { width:44, height:44, borderRadius:10, objectFit:'cover', background:'rgba(255,255,255,0.06)' },
   stampForm: { display:'grid', gridTemplateColumns:'1.3fr 70px 1.5fr auto', gap:8, marginTop:10 },
   stampSelect: { minWidth:120, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'#14102c', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
   stampInput: { minWidth:0, padding:'9px 10px', borderRadius:10, border:'1px solid rgba(170,235,58,0.3)', background:'rgba(255,255,255,0.05)', color:'white', fontFamily:"'Nunito',sans-serif", fontSize:12, outline:'none' },
@@ -224,6 +236,10 @@ export default function Admin() {
   const [stampInputs, setStampInputs] = useState({})
   const [stampPoints, setStampPoints] = useState({})
   const [stampNotes, setStampNotes] = useState({})
+  const [wishlistQueries, setWishlistQueries] = useState({})
+  const [wishlistResults, setWishlistResults] = useState({})
+  const [wishlistSearching, setWishlistSearching] = useState({})
+  const [wishlistBusy, setWishlistBusy] = useState({})
 
   const getSavedPassword = () => localStorage.getItem('rav_admin_password') || ''
 
@@ -346,6 +362,72 @@ export default function Admin() {
     loadUsers()
   }
 
+  const getWishlistQuery = (item) => {
+    return wishlistQueries[item.id] ?? getWishlistDisplayTitle(item)
+  }
+
+  const searchWishlistProduct = async (item) => {
+    const query = getWishlistQuery(item).trim()
+    if (query.length < 2) {
+      setMsg('Escribe al menos 2 letras para buscar en Shopify.')
+      setTimeout(() => setMsg(''), 3000)
+      return
+    }
+
+    setWishlistSearching(prev => ({ ...prev, [item.id]: true }))
+    setWishlistResults(prev => ({ ...prev, [item.id]: [] }))
+
+    try {
+      const res = await fetch(`/api/shopify/search-products?q=${encodeURIComponent(query)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error('search failed')
+      setWishlistResults(prev => ({ ...prev, [item.id]: data.products || [] }))
+      if (!data.products?.length) {
+        setMsg('No encontramos ese producto disponible en Shopify.')
+        setTimeout(() => setMsg(''), 3500)
+      }
+    } catch (error) {
+      setMsg('No se pudo buscar en Shopify.')
+      setTimeout(() => setMsg(''), 3500)
+    }
+
+    setWishlistSearching(prev => ({ ...prev, [item.id]: false }))
+  }
+
+  const updateWishlistItem = async (item, action, extra = {}) => {
+    setWishlistBusy(prev => ({ ...prev, [item.id]: true }))
+
+    const res = await fetch('/api/admin/wishlist', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-rav-admin-password': getSavedPassword(),
+      },
+      body: JSON.stringify({
+        itemId: item.id,
+        action,
+        ...extra,
+      }),
+    })
+
+    if (!res.ok) {
+      setMsg('No se pudo actualizar la Wishlist. Vuelve a iniciar sesión.')
+      setTimeout(() => setMsg(''), 4000)
+    } else {
+      const label = action === 'confirm_shopify'
+        ? 'Producto confirmado con Shopify.'
+        : action === 'mark_unavailable'
+          ? 'Producto marcado como no encontrado.'
+          : 'Producto confirmado manualmente.'
+      setMsg(label)
+      setTimeout(() => setMsg(''), 4000)
+      setWishlistResults(prev => ({ ...prev, [item.id]: [] }))
+      await loadUsers()
+    }
+
+    setWishlistBusy(prev => ({ ...prev, [item.id]: false }))
+  }
+
   const openWhatsApp = (phone, message) => {
     const whatsappPhone = getWhatsAppPhone(phone)
     if (!whatsappPhone) {
@@ -466,7 +548,7 @@ export default function Admin() {
   const pendingWishlistItems = [...allWishlistItems]
     .filter(item => item.match_status === 'pending_confirmation')
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 8)
+    .slice(0, 20)
   const recentWishlistItems = [...allWishlistItems]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 5)
@@ -554,34 +636,97 @@ export default function Admin() {
       </div>
 
       <div style={C.insightGrid}>
-        <div style={C.insightPanel}>
-          <p style={C.insightTitle}>PENDIENTES POR CONFIRMAR</p>
+        <div style={{ ...C.insightPanel, gridColumn:'1 / -1' }}>
+          <p style={C.insightTitle}>WISHLIST PENDIENTES · REVISIÓN HUMANA</p>
           {pendingWishlistItems.length === 0 && <p style={C.kidMeta}>No hay juguetes pendientes por confirmar.</p>}
           {pendingWishlistItems.map(item => {
             const image = getWishlistImage(item)
             const displayPrice = getWishlistDisplayPrice(item)
+            const query = getWishlistQuery(item)
+            const results = wishlistResults[item.id] || []
+            const busy = wishlistBusy[item.id]
             return (
-              <div key={item.id} style={C.insightRow}>
-                <div style={{ display:'flex', gap:10, minWidth:0 }}>
-                  {image
-                    ? <img src={image} alt={getWishlistDisplayTitle(item)} style={C.wishlistThumb} />
-                    : <span style={C.wishlistFallback}>🎁</span>}
-                  <div>
-                    <p style={C.insightName}>{getWishlistDisplayTitle(item)}</p>
-                    <p style={C.insightMeta}>
-                      {item.parent_name || 'Sin nombre'} · {item.parent_email || 'Sin email'}
-                    </p>
-                    <p style={C.insightMeta}>
-                      Para: {item.child_name || 'General'} · {displayPrice ? `Precio estimado: ${formatPrice(displayPrice)}` : 'Sin precio estimado'}
-                    </p>
-                    <span style={C.wishlistSource}>{getWishlistSourceLabel(item.source)}</span>
-                    {item.product_url && (
-                      <a style={C.wishlistLink} href={item.product_url} target="_blank" rel="noopener noreferrer">Abrir producto</a>
-                    )}
-                    <p style={C.wishlistNote}>No es oficial hasta conectar Shopify.</p>
+              <div key={item.id} style={C.wishlistQueueCard}>
+                {image
+                  ? <img src={image} alt={getWishlistDisplayTitle(item)} style={C.wishlistQueuePhoto} />
+                  : <span style={C.wishlistQueueFallback}>🎁</span>}
+
+                <div>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start' }}>
+                    <div>
+                      <p style={C.insightName}>{getWishlistDisplayTitle(item)}</p>
+                      <p style={C.insightMeta}>
+                        {item.parent_name || 'Sin nombre'} · {item.parent_email || 'Sin email'} · {item.parent_phone || 'Sin teléfono'}
+                      </p>
+                      <p style={C.insightMeta}>
+                        Para: {item.child_name || 'General'} · {displayPrice ? `Precio estimado: ${formatPrice(displayPrice)}` : 'Sin precio estimado'}
+                      </p>
+                      <span style={C.wishlistSource}>{getWishlistSourceLabel(item.source)}</span>
+                      {item.product_url && (
+                        <a style={{ ...C.wishlistLink, marginLeft:8 }} href={item.product_url} target="_blank" rel="noopener noreferrer">Abrir link original</a>
+                      )}
+                    </div>
+                    <span style={C.wishlistPendingBadge}>{getWishlistMatchLabel(item.match_status)}</span>
+                  </div>
+
+                  <div style={C.wishlistSearchRow}>
+                    <input
+                      style={C.miniInput}
+                      value={query}
+                      placeholder="Buscar producto en Shopify"
+                      onChange={e => setWishlistQueries(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && searchWishlistProduct(item)}
+                    />
+                    <button style={C.miniBtn} onClick={() => searchWishlistProduct(item)} disabled={wishlistSearching[item.id] || busy}>
+                      {wishlistSearching[item.id] ? 'Buscando...' : 'Buscar Shopify'}
+                    </button>
+                  </div>
+
+                  {results.length > 0 && (
+                    <div style={C.productResults}>
+                      {results.map(product => (
+                        <div key={product.product_id} style={C.productResult}>
+                          {product.image_url
+                            ? <img src={product.image_url} alt={product.title} style={C.productResultImg} />
+                            : <span style={C.wishlistFallback}>🎁</span>}
+                          <div>
+                            <p style={C.insightName}>{product.title}</p>
+                            <p style={C.insightMeta}>{formatPrice(product.price) || 'Sin precio'} · Disponible en Shopify</p>
+                          </div>
+                          <button
+                            style={C.miniBtn}
+                            disabled={busy}
+                            onClick={() => updateWishlistItem(item, 'confirm_shopify', { product })}
+                          >
+                            Confirmar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={C.wishlistActionRow}>
+                    <button
+                      style={C.secondaryBtn}
+                      disabled={busy}
+                      onClick={() => updateWishlistItem(item, 'confirm_manual', {
+                        title: getWishlistDisplayTitle(item),
+                        price: displayPrice,
+                        productUrl: item.product_url || '',
+                      })}
+                    >
+                      Confirmar manual
+                    </button>
+                    <button
+                      style={C.dangerBtn}
+                      disabled={busy}
+                      onClick={() => updateWishlistItem(item, 'mark_unavailable')}
+                    >
+                      No encontrado
+                    </button>
+                    <p style={C.wishlistNote}>Si el sistema no lo encuentra, queda aquí para que una persona lo confirme.</p>
                   </div>
                 </div>
-                <span style={C.wishlistPendingBadge}>{getWishlistMatchLabel(item.match_status)}</span>
               </div>
             )
           })}
