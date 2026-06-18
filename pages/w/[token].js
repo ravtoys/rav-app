@@ -53,8 +53,12 @@ const C = {
   price: { display:'inline-flex', marginTop:10, minHeight:30, padding:'6px 11px 5px 16px', borderRadius:'8px 10px 10px 8px', background:'#FF6B3D', color:'#FBEFC8', fontFamily:"'Bungee',sans-serif", fontSize:13, boxShadow:'3px 3px 0 rgba(0,0,0,.2)' },
   pending: { display:'flex', alignItems:'center', gap:7, color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:700, lineHeight:1.25, marginTop:10 },
   dot: { width:8, height:8, borderRadius:'50%', background:'#3FA9F5', boxShadow:'0 0 12px rgba(63,169,245,.9)', flex:'0 0 auto', animation:'pulse-dot 1.3s ease-in-out infinite' },
-  buyBtn: { gridColumn:'1 / -1', position:'relative', zIndex:2, minHeight:46, border:0, borderRadius:15, background:'linear-gradient(160deg,#D6FF6E,#BDF24A 55%,#7FC916)', color:'#10240A', fontFamily:"'Fredoka',sans-serif", fontSize:14, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', gap:8, textDecoration:'none', boxShadow:'0 10px 20px rgba(127,201,22,.28), inset 0 2px 0 rgba(255,255,255,.5)' },
+  actions: { gridColumn:'1 / -1', position:'relative', zIndex:2, display:'grid', gap:8 },
+  buyBtn: { minHeight:46, border:0, borderRadius:15, background:'linear-gradient(160deg,#D6FF6E,#BDF24A 55%,#7FC916)', color:'#10240A', fontFamily:"'Fredoka',sans-serif", fontSize:14, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', gap:8, textDecoration:'none', boxShadow:'0 10px 20px rgba(127,201,22,.28), inset 0 2px 0 rgba(255,255,255,.5)' },
+  boughtBtn: { minHeight:44, border:'1.5px solid rgba(255,216,77,.55)', borderRadius:15, background:'rgba(255,216,77,.11)', color:'#FFD84D', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' },
+  boughtBtnBusy: { opacity:.62, cursor:'wait' },
   disabledBtn: { gridColumn:'1 / -1', position:'relative', zIndex:2, minHeight:46, border:'1px solid rgba(127,168,216,.28)', borderRadius:15, background:'rgba(127,168,216,.12)', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' },
+  inlineMessage: { margin:'0 0 12px', padding:'10px 12px', borderRadius:14, background:'rgba(255,216,77,.11)', border:'1px solid rgba(255,216,77,.32)', color:'#FFD84D', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, lineHeight:1.3 },
   empty: { textAlign:'center', padding:'38px 18px', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, lineHeight:1.45, border:'1px dashed rgba(127,168,216,.35)', borderRadius:18, background:'rgba(14,27,58,.58)' },
   error: { minHeight:'100vh', background:'#060A18', color:'#7FA8D8', display:'flex', alignItems:'center', justifyContent:'center', textAlign:'center', padding:24, fontFamily:"'Fredoka',sans-serif" },
 }
@@ -101,6 +105,8 @@ export default function PublicWishlist() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('all')
+  const [markingId, setMarkingId] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
 
   useEffect(() => {
     if (!token) return
@@ -121,6 +127,35 @@ export default function PublicWishlist() {
     if (filter === 'general') return items.filter(item => !item.child_id)
     return items.filter(item => item.child_id === filter)
   }, [data, filter])
+
+  const markPurchased = async (item) => {
+    if (!token || markingId) return
+    const ok = window.confirm(`¿Marcar "${item.title}" como comprado?`)
+    if (!ok) return
+
+    setMarkingId(item.id)
+    setActionMessage('')
+
+    try {
+      const res = await fetch('/api/public-wishlist/mark-purchased', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ token:String(token), itemId:item.id }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'No pudimos marcarlo como comprado.')
+
+      setData(current => ({
+        ...current,
+        items:(current?.items || []).map(existing => existing.id === item.id ? { ...existing, status:'purchased' } : existing),
+      }))
+      setActionMessage('Listo. Este regalo quedó marcado como comprado.')
+    } catch (err) {
+      setActionMessage(err.message || 'No pudimos marcarlo como comprado.')
+    } finally {
+      setMarkingId('')
+    }
+  }
 
   if (loading) return <div style={C.error}>Cargando Wishlist RAV...</div>
   if (error || !data) return <div style={C.error}>{error || 'Wishlist no encontrada.'}</div>
@@ -152,7 +187,8 @@ export default function PublicWishlist() {
       </header>
 
       <main style={C.body}>
-        <p style={C.notice}>Cuando compres un regalo, avísale a la familia para evitar duplicados. La compra se completa en ravtoys.com.</p>
+        <p style={C.notice}>Cuando compres un regalo, toca “Ya lo compré” para evitar duplicados. La compra se completa en ravtoys.com o en tienda.</p>
+        {actionMessage ? <p style={C.inlineMessage}>{actionMessage}</p> : null}
 
         <div style={C.filters}>
           <button style={{ ...C.filterPill, ...(filter === 'all' ? C.filterActive : {}) }} onClick={() => setFilter('all')}>Todos</button>
@@ -185,10 +221,17 @@ export default function PublicWishlist() {
               </div>
               {purchased ? (
                 <span style={C.disabledBtn}>Ya marcado como comprado</span>
-              ) : item.product_url ? (
-                <a style={C.buyBtn} href={item.product_url} target="_blank" rel="noreferrer">Comprar en RAV</a>
               ) : (
-                <span style={C.disabledBtn}>RAV confirmará este juguete</span>
+                <div style={C.actions}>
+                  {item.product_url ? (
+                    <a style={C.buyBtn} href={item.product_url} target="_blank" rel="noreferrer">Comprar en RAV</a>
+                  ) : (
+                    <span style={C.disabledBtn}>RAV confirmará este juguete</span>
+                  )}
+                  <button type="button" style={{ ...C.boughtBtn, ...(markingId === item.id ? C.boughtBtnBusy : {}) }} onClick={() => markPurchased(item)} disabled={markingId === item.id}>
+                    {markingId === item.id ? 'Marcando...' : 'Ya lo compré'}
+                  </button>
+                </div>
               )}
             </article>
           )
