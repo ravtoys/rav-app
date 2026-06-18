@@ -36,6 +36,12 @@ const C = {
   addBtn: { padding:'10px 14px', borderRadius:10, border:'none', background:'#AAEB3A', color:'#080618', fontSize:12, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
   removeBtn: { padding:'10px 14px', borderRadius:10, border:'1px solid rgba(255,100,100,0.4)', background:'rgba(200,30,30,0.1)', color:'#ff6666', fontSize:12, fontWeight:900, cursor:'pointer', fontFamily:"'Nunito',sans-serif", whiteSpace:'nowrap' },
   successMsg: { background:'rgba(170,235,58,0.15)', border:'1px solid #AAEB3A', borderRadius:10, padding:'10px 14px', fontSize:13, color:'#AAEB3A', fontWeight:700, marginBottom:14 },
+  statusPanel: { display:'grid', gridTemplateColumns:'1.2fr repeat(3,1fr)', gap:10, marginBottom:20, background:'rgba(255,255,255,0.035)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:14, padding:12 },
+  statusTitle: { color:'white', fontSize:13, fontWeight:900 },
+  statusSub: { color:'rgba(255,255,255,0.45)', fontSize:11, marginTop:3, lineHeight:1.3 },
+  statusChip: { borderRadius:12, padding:'10px 11px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' },
+  statusOk: { color:'#AAEB3A', fontSize:12, fontWeight:900 },
+  statusWarn: { color:'#FFD84D', fontSize:12, fontWeight:900 },
   statsRow: { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 },
   statCard: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'12px 14px' },
   statNum: { fontFamily:"'Exo 2',sans-serif", fontSize:24, fontWeight:900, color:'#AAEB3A' },
@@ -240,6 +246,7 @@ export default function Admin() {
   const [wishlistResults, setWishlistResults] = useState({})
   const [wishlistSearching, setWishlistSearching] = useState({})
   const [wishlistBusy, setWishlistBusy] = useState({})
+  const [systemStatus, setSystemStatus] = useState(null)
 
   const getSavedPassword = () => localStorage.getItem('rav_admin_password') || ''
 
@@ -249,8 +256,19 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    if (authed) loadUsers()
+    if (authed) {
+      loadUsers()
+      loadSystemStatus()
+    }
   }, [authed])
+
+  const loadSystemStatus = async () => {
+    const res = await fetch('/api/admin/system-status', {
+      headers: { 'x-rav-admin-password': getSavedPassword() },
+    })
+    const data = await res.json()
+    if (res.ok) setSystemStatus(data)
+  }
 
   const loadUsers = async () => {
     setLoading(true)
@@ -578,6 +596,29 @@ export default function Admin() {
       <div style={C.header}>
         <p style={C.headerTitle}>👽 Admin RAV Club</p>
         <button style={C.logoutBtn} onClick={handleLogout}>Salir</button>
+      </div>
+
+      <div style={C.statusPanel}>
+        <div>
+          <p style={C.statusTitle}>Photo matching status</p>
+          <p style={C.statusSub}>
+            {systemStatus?.photo_matching_ready
+              ? 'Ready to test real toy photos.'
+              : 'Needs OpenAI configured for full automatic photo recognition.'}
+          </p>
+        </div>
+        <div style={C.statusChip}>
+          <p style={systemStatus?.openai_configured ? C.statusOk : C.statusWarn}>{systemStatus?.openai_configured ? 'Ready' : 'Missing'}</p>
+          <p style={C.statLabel}>OPENAI</p>
+        </div>
+        <div style={C.statusChip}>
+          <p style={systemStatus?.shopify_configured ? C.statusOk : C.statusWarn}>{systemStatus?.shopify_configured ? 'Ready' : 'Missing'}</p>
+          <p style={C.statLabel}>SHOPIFY</p>
+        </div>
+        <div style={C.statusChip}>
+          <p style={systemStatus?.supabase_admin_configured ? C.statusOk : C.statusWarn}>{systemStatus?.supabase_admin_configured ? 'Ready' : 'Missing'}</p>
+          <p style={C.statLabel}>SUPABASE</p>
+        </div>
       </div>
 
       <div style={{ ...C.statsRow, gridTemplateColumns:'repeat(5,1fr)' }}>
