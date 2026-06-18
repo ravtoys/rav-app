@@ -453,6 +453,32 @@ export default function Wishlist() {
     return data.publicUrl
   }
 
+  const matchPhotoToProduct = async (uploadedUrl) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return null
+
+      const res = await fetch('/api/wishlist/match-photo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          imageUrl: uploadedUrl,
+          userTitle: optionalTitle.trim(),
+          browserDetectedTitle: photoDetection.title || '',
+          browserDetectedPrice: photoDetection.price || null,
+        }),
+      })
+
+      if (!res.ok) return null
+      return await res.json()
+    } catch {
+      return null
+    }
+  }
+
   const savePhotoItem = async () => {
     if (!photoFile) {
       setError('Toma o sube una foto del juguete.')
@@ -463,23 +489,43 @@ export default function Wishlist() {
     setError('')
     try {
       const uploadedUrl = await uploadWishlistPhoto(photoFile)
-      await new Promise(resolve => setTimeout(resolve, 1700))
-      const title = optionalTitle.trim() || photoDetection.title || 'Juguete por confirmar'
-      const { error: insertError } = await supabase.from('wishlist_items').insert({
+      const match = await matchPhotoToProduct(uploadedUrl)
+      const product = match?.matched ? match.product : null
+      const detectedTitle = match?.detected_title || optionalTitle.trim() || photoDetection.title || ''
+      const detectedPrice = match?.detected_price || photoDetection.price || null
+      const payload = product ? {
         user_id: userId,
         child_id: selectedChildId || null,
-        title,
-        detected_title: photoDetection.title || null,
-        detected_price: photoDetection.price || null,
+        title: product.title,
+        image_url: product.image_url || null,
+        price: product.price,
+        product_url: product.product_url,
+        detected_title: detectedTitle || product.title,
+        detected_price: detectedPrice,
+        uploaded_image_url: uploadedUrl,
+        status: 'wanted',
+        source: 'shopify',
+        match_status: 'shopify_matched',
+        shopify_product_id: product.product_id,
+        shopify_variant_id: product.variant_id || null,
+        sku: product.sku || null,
+        updated_at: new Date().toISOString(),
+      } : {
+        user_id: userId,
+        child_id: selectedChildId || null,
+        title: detectedTitle || 'Juguete por confirmar',
+        detected_title: detectedTitle || null,
+        detected_price: detectedPrice,
         uploaded_image_url: uploadedUrl,
         status: 'wanted',
         source: 'photo',
         match_status: 'pending_confirmation',
         updated_at: new Date().toISOString(),
-      })
+      }
+      const { error: insertError } = await supabase.from('wishlist_items').insert(payload)
       if (insertError) throw insertError
       resetFlow()
-      setMessage('Listo. RAV está rastreando el juguete y confirmará el precio oficial.')
+      setMessage(product ? 'Listo. Encontramos el producto en RAV y quedó confirmado.' : 'Listo. RAV está rastreando el juguete y confirmará el precio oficial.')
       await loadItems()
     } catch (err) {
       if (err?.message?.includes('3MB') || err?.message?.includes('imagen válida')) setError(err.message)
@@ -735,7 +781,7 @@ export default function Wishlist() {
 
         {filteredItems.map(item => {
           const pending = item.match_status === 'pending_confirmation'
-          const displayImage = item.uploaded_image_url || item.image_url
+          const displayImage = item.match_status === 'shopify_matched' ? (item.image_url || item.uploaded_image_url) : (item.uploaded_image_url || item.image_url)
           const tone = getTone(kids, item.child_id)
           const kid = getKid(kids, item.child_id)
           const officialPrice = item.price || (item.match_status === 'shopify_matched' ? item.detected_price : null)
