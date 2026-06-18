@@ -104,6 +104,12 @@ const C = {
   stepPill: { display:'inline-block', padding:'6px 10px', borderRadius:999, background:'rgba(189,242,74,.14)', color:'#BDF24A', border:'1px solid rgba(189,242,74,.32)', fontFamily:"'Bungee',sans-serif", fontSize:10, marginBottom:10 },
   question: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:20, fontWeight:800, lineHeight:1.12, marginBottom:6 },
   helper: { color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, lineHeight:1.35, marginBottom:12 },
+  methodGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'12px 0 14px' },
+  methodCard: { minHeight:132, border:'1.5px solid rgba(127,168,216,.28)', borderRadius:17, padding:12, background:'rgba(10,18,40,.72)', color:'#FBEFC8', textAlign:'left', fontFamily:"'Fredoka',sans-serif", display:'flex', flexDirection:'column', gap:8, boxShadow:'inset 0 0 20px rgba(63,169,245,.04)' },
+  methodActive: { border:'2px solid #BDF24A', background:'linear-gradient(160deg, rgba(189,242,74,.16), rgba(10,18,40,.88))', boxShadow:'0 0 0 3px rgba(189,242,74,.10), 0 12px 24px rgba(0,0,0,.24)' },
+  methodIcon: { width:38, height:38, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', background:'#BDF24A', color:'#10240A', boxShadow:'0 8px 18px rgba(189,242,74,.22)' },
+  methodTitle: { fontSize:15, fontWeight:900, lineHeight:1.05, color:'#FBEFC8' },
+  methodSub: { fontSize:11, fontWeight:700, color:'#9FD8FF', lineHeight:1.3 },
   uploadBox: { width:'100%', minHeight:236, border:'2px dashed rgba(189,242,74,.52)', background:'rgba(189,242,74,.07)', borderRadius:18, padding:14, textAlign:'center', color:'#FBEFC8', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, overflow:'hidden' },
   uploadPreview: { width:'100%', maxHeight:320, objectFit:'cover', borderRadius:14, border:'1px solid rgba(251,239,200,.18)' },
   changePhoto: { color:'#BDF24A', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800 },
@@ -112,6 +118,7 @@ const C = {
   recipientActive: { border:'1.5px solid var(--tone)', background:'rgba(189,242,74,.10)', boxShadow:'0 0 16px var(--soft)' },
   checkMark: { marginLeft:'auto', color:'var(--tone)', fontFamily:"'Bungee',sans-serif", fontSize:16 },
   input: { width:'100%', padding:'13px 13px', borderRadius:13, border:'1px solid rgba(189,242,74,.28)', background:'rgba(255,255,255,.05)', color:'#FBEFC8', fontFamily:"'Nunito',sans-serif", fontSize:14, outline:'none', marginTop:10 },
+  fieldHint: { color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:11, fontWeight:700, lineHeight:1.3, margin:'-2px 0 0' },
   details: { marginTop:12, border:'1px dashed rgba(127,168,216,.32)', borderRadius:15, padding:12, background:'rgba(255,255,255,.025)' },
   detailsSummary: { color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800, cursor:'pointer' },
   label: { display:'block', fontFamily:"'Fredoka',sans-serif", fontSize:10, color:'#BDF24A', fontWeight:800, letterSpacing:'.08em', margin:'12px 0 6px', textTransform:'uppercase' },
@@ -123,6 +130,9 @@ const C = {
   detectionTitle: { color:'#FFD84D', fontFamily:"'Bungee',sans-serif", fontSize:10, marginBottom:5 },
   detectionText: { color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif", fontSize:12, lineHeight:1.35 },
   catalogBox: { marginTop:12, border:'1px solid rgba(63,169,245,.32)', background:'rgba(63,169,245,.07)', borderRadius:15, padding:12 },
+  catalogHint: { color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:700, lineHeight:1.3, margin:'0 0 10px' },
+  linkDivider: { display:'flex', alignItems:'center', gap:10, margin:'14px 0 2px', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:11, fontWeight:800 },
+  dividerLine: { flex:1, height:1, background:'rgba(127,168,216,.24)' },
   catalogResults: { display:'grid', gap:9, marginTop:10 },
   catalogCard: { width:'100%', display:'grid', gridTemplateColumns:'56px 1fr auto', gap:10, alignItems:'center', textAlign:'left', border:'1px solid rgba(127,168,216,.24)', borderRadius:14, padding:9, background:'rgba(10,18,40,.72)', color:'#FBEFC8', fontFamily:"'Fredoka',sans-serif" },
   catalogImg: { width:56, height:56, borderRadius:12, objectFit:'cover', background:'#0A1228', border:'1px solid rgba(251,239,200,.16)' },
@@ -305,6 +315,7 @@ export default function Wishlist() {
   const [manualForm, setManualForm] = useState(blankManualForm)
   const [editingId, setEditingId] = useState('')
   const [showFlow, setShowFlow] = useState(false)
+  const [addMethod, setAddMethod] = useState('catalog')
   const [selectedChildId, setSelectedChildId] = useState('')
   const [ravLink, setRavLink] = useState('')
   const [catalogQuery, setCatalogQuery] = useState('')
@@ -365,6 +376,7 @@ export default function Wishlist() {
   const resetFlow = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setShowFlow(false)
+    setAddMethod('catalog')
     setSelectedChildId('')
     setRavLink('')
     setCatalogQuery('')
@@ -667,10 +679,10 @@ export default function Wishlist() {
 
       <main style={C.body}>
         <button style={C.captureCard} onClick={startAdd}>
-          <span style={C.captureChip}><Icon type="camera" size={27} /><span style={C.sparkle}><Icon type="spark" size={17} color="#FFD84D" /></span></span>
+          <span style={C.captureChip}><Icon type="search" size={27} /><span style={C.sparkle}><Icon type="spark" size={17} color="#FFD84D" /></span></span>
           <span>
             <span style={C.captureTitle}>Agregar juguete</span>
-            <span style={C.captureSub}>Toma una foto de cualquier juguete, en cualquier tienda. RAV lo identifica y confirma el precio.</span>
+            <span style={C.captureSub}>Busca en ravtoys.com o toma una foto. Guardarlo debe sentirse rápido y mágico.</span>
           </span>
           <Icon type="chevron" color="#BDF24A" />
         </button>
@@ -717,7 +729,7 @@ export default function Wishlist() {
           <div style={C.empty}>
             <ShootingStarIcon size={52} />
             <p style={{ color:'#FBEFC8', fontSize:15, fontWeight:800, marginTop:8 }}>Aún no hay juguetes aquí</p>
-            <p>Toca "Agregar juguete" y toma la primera foto.</p>
+            <p>Toca "Agregar juguete" y busca en ravtoys.com o toma la primera foto.</p>
           </div>
         )}
 
@@ -780,27 +792,8 @@ export default function Wishlist() {
             <section style={C.flowCard}>
               {error && <p style={C.err}>{error}</p>}
               <span style={C.stepPill}>Paso 1</span>
-              <p style={C.question}>Toma una foto del juguete</p>
-              <p style={C.helper}>En la tienda, en una caja, en internet: donde sea. RAV lo identifica por ti.</p>
-              <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => choosePhoto(e.target.files?.[0])} />
-              <button style={C.uploadBox} onClick={() => photoInputRef.current?.click()}>
-                {photoPreview ? <img src={photoPreview} alt="Foto del juguete" style={C.uploadPreview} /> : <Icon type="camera" size={44} color="#BDF24A" />}
-                <span style={C.changePhoto}>{photoPreview ? 'Cambiar foto' : 'Tomar o subir foto'}</span>
-              </button>
-
-              {photoPreview && (
-                <div style={C.detectionBox}>
-                  <p style={C.detectionTitle}>Lectura de imagen</p>
-                  {photoDetecting && <p style={C.detectionText}>Intentando leer nombre y precio...</p>}
-                  {!photoDetecting && photoDetection.tried && !photoDetection.supported && <p style={C.detectionText}>Este navegador no permite leer texto todavía. Guardaremos la foto para que RAV lo confirme.</p>}
-                  {!photoDetecting && photoDetection.tried && photoDetection.supported && !photoDetection.title && !photoDetection.price && <p style={C.detectionText}>No se detectó texto claro. RAV confirmará el juguete y el precio.</p>}
-                  {!photoDetecting && !!photoDetection.title && <p style={C.detectionText}>Nombre estimado: <strong>{photoDetection.title}</strong></p>}
-                  {!photoDetecting && !!photoDetection.price && <p style={C.detectionText}>Precio estimado: <strong>{formatPrice(photoDetection.price)}</strong></p>}
-                </div>
-              )}
-
-              <span style={{ ...C.stepPill, marginTop:16 }}>Paso 2</span>
               <p style={C.question}>¿Para quién es este regalo?</p>
+              <p style={C.helper}>Elige si va para toda la familia o para uno de tus peques exploradores.</p>
               <div style={C.recipientList}>
                 <button style={{ ...C.recipientBtn, ...(selectedChildId === '' ? C.recipientActive : {}), '--tone':'#BDF24A', '--soft':'rgba(189,242,74,.22)' }} onClick={() => setSelectedChildId('')}>
                   <span style={{ ...C.recipientBadge, position:'static', boxShadow:'0 0 0 2px #BDF24A' }}><Icon type="gift" size={17} color="#BDF24A" /></span>
@@ -823,16 +816,27 @@ export default function Wishlist() {
                 </button>
               </div>
 
-              <input style={C.input} placeholder="¿Qué juguete es? (opcional)" value={optionalTitle} onChange={e => setOptionalTitle(e.target.value)} />
+              <span style={{ ...C.stepPill, marginTop:18 }}>Paso 2</span>
+              <p style={C.question}>¿Qué juguete quieres guardar?</p>
+              <p style={C.helper}>Si está en ravtoys.com, lo agregamos con foto, precio y link oficial. Si lo viste en tienda, una foto basta.</p>
 
-              <button style={photoFile ? C.saveBtn : C.disabledBtn} onClick={savePhotoItem} disabled={!photoFile || saving}>
-                <Icon type="spark" size={18} color="currentColor" /> {saving ? 'Guardando...' : 'Guardar en la wishlist'}
-              </button>
+              <div style={C.methodGrid}>
+                <button type="button" style={{ ...C.methodCard, ...(addMethod === 'catalog' ? C.methodActive : {}) }} onClick={() => setAddMethod('catalog')}>
+                  <span style={C.methodIcon}><Icon type="search" size={21} color="currentColor" /></span>
+                  <span style={C.methodTitle}>Buscar en ravtoys.com</span>
+                  <span style={C.methodSub}>Encuentra el juguete oficial o pega su link.</span>
+                </button>
+                <button type="button" style={{ ...C.methodCard, ...(addMethod === 'photo' ? C.methodActive : {}) }} onClick={() => setAddMethod('photo')}>
+                  <span style={C.methodIcon}><Icon type="camera" size={22} color="currentColor" /></span>
+                  <span style={C.methodTitle}>Tomar o subir foto</span>
+                  <span style={C.methodSub}>Perfecto si lo viste en tienda o no sabes el nombre.</span>
+                </button>
+              </div>
 
-              <details style={C.details}>
-                <summary style={C.detailsSummary}>Buscar en catálogo RAV o usar opciones internas</summary>
+              {addMethod === 'catalog' && (
                 <div style={C.catalogBox}>
-                  <label style={C.label}>Buscar producto de ravtoys.com</label>
+                  <label style={{ ...C.label, marginTop:0 }}>Buscar juguete en ravtoys.com</label>
+                  <p style={C.catalogHint}>Busca por nombre, marca o tipo de juguete. Cuando lo elijas, quedará guardado con su información oficial.</p>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 92px', gap:8 }}>
                     <input style={{ ...C.input, marginTop:0 }} placeholder="Ej: LEGO, Barbie, dinosaurio..." value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') searchCatalog() }} />
                     <button style={{ ...C.catalogPick, borderRadius:13 }} onClick={searchCatalog} disabled={catalogLoading}>{catalogLoading ? '...' : 'Buscar'}</button>
@@ -852,11 +856,44 @@ export default function Wishlist() {
                       ))}
                     </div>
                   )}
-                </div>
 
-                <label style={C.label}>Link de ravtoys.com</label>
-                <input style={C.input} placeholder="https://ravtoys.com/products/..." value={ravLink} onChange={e => setRavLink(e.target.value)} />
-                <button style={ravLink.trim() ? C.saveBtn : C.disabledBtn} onClick={saveRavLink} disabled={!ravLink.trim() || saving}>Guardar link de RAV</button>
+                  <div style={C.linkDivider}><span style={C.dividerLine} /> o pega el link oficial <span style={C.dividerLine} /></div>
+                  <input style={C.input} placeholder="https://ravtoys.com/products/..." value={ravLink} onChange={e => setRavLink(e.target.value)} />
+                  <button style={ravLink.trim() ? C.saveBtn : C.disabledBtn} onClick={saveRavLink} disabled={!ravLink.trim() || saving}>Guardar link de RAV</button>
+                </div>
+              )}
+
+              {addMethod === 'photo' && (
+                <>
+                  <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => choosePhoto(e.target.files?.[0])} />
+                  <button style={C.uploadBox} onClick={() => photoInputRef.current?.click()}>
+                    {photoPreview ? <img src={photoPreview} alt="Foto del juguete" style={C.uploadPreview} /> : <Icon type="camera" size={44} color="#BDF24A" />}
+                    <span style={C.changePhoto}>{photoPreview ? 'Cambiar foto' : 'Tomar o subir foto'}</span>
+                  </button>
+
+                  {photoPreview && (
+                    <div style={C.detectionBox}>
+                      <p style={C.detectionTitle}>Lectura de imagen</p>
+                      {photoDetecting && <p style={C.detectionText}>Intentando leer nombre y precio...</p>}
+                      {!photoDetecting && photoDetection.tried && !photoDetection.supported && <p style={C.detectionText}>Este navegador no permite leer texto todavía. Guardaremos la foto para que RAV lo confirme.</p>}
+                      {!photoDetecting && photoDetection.tried && photoDetection.supported && !photoDetection.title && !photoDetection.price && <p style={C.detectionText}>No se detectó texto claro. RAV confirmará el juguete y el precio.</p>}
+                      {!photoDetecting && !!photoDetection.title && <p style={C.detectionText}>Nombre estimado: <strong>{photoDetection.title}</strong></p>}
+                      {!photoDetecting && !!photoDetection.price && <p style={C.detectionText}>Precio estimado: <strong>{formatPrice(photoDetection.price)}</strong></p>}
+                    </div>
+                  )}
+
+                  <label style={C.label}>Nombre del juguete</label>
+                  <p style={C.fieldHint}>Opcional, pero ayuda a RAV a confirmarlo más rápido.</p>
+                  <input style={C.input} placeholder="Ej: Set LEGO, muñeca, carro..." value={optionalTitle} onChange={e => setOptionalTitle(e.target.value)} />
+
+                  <button style={photoFile ? C.saveBtn : C.disabledBtn} onClick={savePhotoItem} disabled={!photoFile || saving}>
+                    <Icon type="spark" size={18} color="currentColor" /> {saving ? 'Guardando...' : 'Guardar foto en la wishlist'}
+                  </button>
+                </>
+              )}
+
+              <details style={C.details} open={!!editingId || showManual}>
+                <summary style={C.detailsSummary}>Opciones internas · solo pruebas</summary>
 
                 <label style={C.label}>Manual · solo pruebas internas</label>
                 <input style={C.input} placeholder="Nombre del juguete" value={manualForm.title} onChange={e => setManualForm(prev => ({ ...prev, title:e.target.value }))} />
