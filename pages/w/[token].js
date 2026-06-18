@@ -36,12 +36,22 @@ const C = {
   ownerName: { fontFamily:"'Fredoka',sans-serif", color:'#FBEFC8', fontSize:16, fontWeight:800, marginTop:1 },
   body: { position:'relative', zIndex:2, width:'100%', maxWidth:430, margin:'0 auto', padding:'16px 14px 28px' },
   notice: { border:'1.5px solid rgba(189,242,74,.28)', background:'rgba(189,242,74,.08)', borderRadius:18, padding:13, fontFamily:"'Fredoka',sans-serif", color:'#BDF24A', fontSize:13, fontWeight:800, lineHeight:1.35, marginBottom:14 },
+  summaryGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 },
+  summaryTile: { border:'1px solid rgba(127,168,216,.24)', borderRadius:16, padding:'11px 12px', background:'rgba(14,27,58,.72)' },
+  summaryTileActive: { border:'1px solid rgba(189,242,74,.5)', background:'rgba(189,242,74,.09)', boxShadow:'0 0 18px rgba(189,242,74,.14)' },
+  summaryTileDone: { border:'1px solid rgba(255,216,77,.36)', background:'rgba(255,216,77,.08)' },
+  summaryNum: { fontFamily:"'Bungee',sans-serif", fontSize:22, color:'#FBEFC8', lineHeight:1 },
+  summaryNumActive: { color:'#BDF24A' },
+  summaryNumDone: { color:'#FFD84D' },
+  summaryLabel: { fontFamily:"'Fredoka',sans-serif", color:'#7FA8D8', fontSize:11, fontWeight:900, textTransform:'uppercase', marginTop:4 },
   filters: { display:'flex', gap:8, overflowX:'auto', padding:'0 1px 13px', scrollbarWidth:'none' },
   filterPill: { border:'1px solid rgba(127,168,216,.3)', borderRadius:999, padding:'8px 11px', background:'rgba(10,18,40,.62)', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, whiteSpace:'nowrap' },
   filterActive: { border:'1px solid #BDF24A', background:'#BDF24A', color:'#10240A', boxShadow:'0 0 16px rgba(189,242,74,.35)' },
   sectionTitle: { fontFamily:"'Bungee',sans-serif", color:'#FBEFC8', fontSize:13, textTransform:'uppercase', margin:'3px 0 12px', letterSpacing:'.02em' },
+  sectionMeta: { color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, marginTop:-7, marginBottom:12 },
   play: { color:'#FF6B3D', marginRight:7 },
   card: { position:'relative', overflow:'hidden', display:'grid', gridTemplateColumns:'104px 1fr', gap:12, borderRadius:18, padding:12, marginBottom:12, background:'linear-gradient(145deg, rgba(14,27,58,.96), rgba(10,18,40,.96))', border:'1.5px solid var(--accent)', boxShadow:'0 13px 28px rgba(0,0,0,.34), 0 0 18px var(--soft)' },
+  cardPurchased: { opacity:.72, background:'linear-gradient(145deg, rgba(18,22,38,.94), rgba(8,12,25,.96))' },
   foil: { position:'absolute', inset:-20, background:'linear-gradient(115deg, transparent 0 34%, rgba(63,169,245,.18) 42%, rgba(189,242,74,.16) 50%, rgba(255,107,61,.14) 58%, transparent 68%)', backgroundSize:'280% 100%', mixBlendMode:'screen', opacity:.5, pointerEvents:'none', animation:'foil-sweep 5.5s ease-in-out infinite alternate' },
   photoWrap: { position:'relative', zIndex:2, width:104, height:104, borderRadius:16, overflow:'hidden', background:'#0A1228', border:'1px solid rgba(251,239,200,.16)' },
   photo: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
@@ -55,9 +65,11 @@ const C = {
   dot: { width:8, height:8, borderRadius:'50%', background:'#3FA9F5', boxShadow:'0 0 12px rgba(63,169,245,.9)', flex:'0 0 auto', animation:'pulse-dot 1.3s ease-in-out infinite' },
   actions: { gridColumn:'1 / -1', position:'relative', zIndex:2, display:'grid', gap:8 },
   buyBtn: { minHeight:46, border:0, borderRadius:15, background:'linear-gradient(160deg,#D6FF6E,#BDF24A 55%,#7FC916)', color:'#10240A', fontFamily:"'Fredoka',sans-serif", fontSize:14, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', gap:8, textDecoration:'none', boxShadow:'0 10px 20px rgba(127,201,22,.28), inset 0 2px 0 rgba(255,255,255,.5)' },
+  buyHint: { margin:'2px 2px 0', color:'#9FD8FF', fontFamily:"'Fredoka',sans-serif", fontSize:11, fontWeight:700, lineHeight:1.25, textAlign:'center' },
   boughtBtn: { minHeight:44, border:'1.5px solid rgba(255,216,77,.55)', borderRadius:15, background:'rgba(255,216,77,.11)', color:'#FFD84D', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' },
   boughtBtnBusy: { opacity:.62, cursor:'wait' },
   disabledBtn: { gridColumn:'1 / -1', position:'relative', zIndex:2, minHeight:46, border:'1px solid rgba(127,168,216,.28)', borderRadius:15, background:'rgba(127,168,216,.12)', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' },
+  purchasedBox: { gridColumn:'1 / -1', position:'relative', zIndex:2, border:'1.5px solid rgba(255,216,77,.4)', borderRadius:15, background:'rgba(255,216,77,.1)', color:'#FFD84D', padding:'11px 12px', fontFamily:"'Fredoka',sans-serif", fontSize:13, fontWeight:900, textAlign:'center', lineHeight:1.25 },
   inlineMessage: { margin:'0 0 12px', padding:'10px 12px', borderRadius:14, background:'rgba(255,216,77,.11)', border:'1px solid rgba(255,216,77,.32)', color:'#FFD84D', fontFamily:"'Fredoka',sans-serif", fontSize:12, fontWeight:800, lineHeight:1.3 },
   empty: { textAlign:'center', padding:'38px 18px', color:'#7FA8D8', fontFamily:"'Fredoka',sans-serif", fontSize:13, lineHeight:1.45, border:'1px dashed rgba(127,168,216,.35)', borderRadius:18, background:'rgba(14,27,58,.58)' },
   error: { minHeight:'100vh', background:'#060A18', color:'#7FA8D8', display:'flex', alignItems:'center', justifyContent:'center', textAlign:'center', padding:24, fontFamily:"'Fredoka',sans-serif" },
@@ -121,16 +133,31 @@ export default function PublicWishlist() {
     load()
   }, [token])
 
+  const wishlistCounts = useMemo(() => {
+    const items = data?.items || []
+    return {
+      available: items.filter(item => item.status !== 'purchased').length,
+      purchased: items.filter(item => item.status === 'purchased').length,
+    }
+  }, [data])
+
   const visibleItems = useMemo(() => {
     const items = data?.items || []
-    if (filter === 'all') return items
-    if (filter === 'general') return items.filter(item => !item.child_id)
-    return items.filter(item => item.child_id === filter)
+    let filtered = items
+    if (filter === 'general') filtered = items.filter(item => !item.child_id)
+    else if (filter !== 'all') filtered = items.filter(item => item.child_id === filter)
+
+    return [...filtered].sort((a, b) => {
+      const aPurchased = a.status === 'purchased'
+      const bPurchased = b.status === 'purchased'
+      if (aPurchased === bPurchased) return 0
+      return aPurchased ? 1 : -1
+    })
   }, [data, filter])
 
   const markPurchased = async (item) => {
     if (!token || markingId) return
-    const ok = window.confirm(`¿Marcar "${item.title}" como comprado?`)
+    const ok = window.confirm(`¿Ya compraste "${item.title}"?\n\nLo marcaremos como comprado para que nadie más lo repita.`)
     if (!ok) return
 
     setMarkingId(item.id)
@@ -149,8 +176,14 @@ export default function PublicWishlist() {
         ...current,
         items:(current?.items || []).map(existing => existing.id === item.id ? { ...existing, status:'purchased' } : existing),
       }))
-      setActionMessage('Listo. Este regalo quedó marcado como comprado.')
+      setActionMessage('Listo. Este regalo quedó marcado como comprado y la familia verá que ya está tomado.')
     } catch (err) {
+      if (String(err.message || '').includes('ya fue marcado')) {
+        setData(current => ({
+          ...current,
+          items:(current?.items || []).map(existing => existing.id === item.id ? { ...existing, status:'purchased' } : existing),
+        }))
+      }
       setActionMessage(err.message || 'No pudimos marcarlo como comprado.')
     } finally {
       setMarkingId('')
@@ -190,6 +223,17 @@ export default function PublicWishlist() {
         <p style={C.notice}>Cuando compres un regalo, toca “Ya lo compré” para evitar duplicados. La compra se completa en ravtoys.com o en tienda.</p>
         {actionMessage ? <p style={C.inlineMessage}>{actionMessage}</p> : null}
 
+        <div style={C.summaryGrid}>
+          <div style={{ ...C.summaryTile, ...C.summaryTileActive }}>
+            <p style={{ ...C.summaryNum, ...C.summaryNumActive }}>{wishlistCounts.available}</p>
+            <p style={C.summaryLabel}>Disponibles</p>
+          </div>
+          <div style={{ ...C.summaryTile, ...C.summaryTileDone }}>
+            <p style={{ ...C.summaryNum, ...C.summaryNumDone }}>{wishlistCounts.purchased}</p>
+            <p style={C.summaryLabel}>Ya comprados</p>
+          </div>
+        </div>
+
         <div style={C.filters}>
           <button style={{ ...C.filterPill, ...(filter === 'all' ? C.filterActive : {}) }} onClick={() => setFilter('all')}>Todos</button>
           <button style={{ ...C.filterPill, ...(filter === 'general' ? C.filterActive : {}) }} onClick={() => setFilter('general')}>General</button>
@@ -201,17 +245,18 @@ export default function PublicWishlist() {
         </div>
 
         <p style={C.sectionTitle}><span style={C.play}>▸</span>Juguetes para regalar</p>
+        <p style={C.sectionMeta}>Los regalos ya comprados bajan al final para evitar repetidos.</p>
         {visibleItems.length === 0 && <div style={C.empty}>No hay juguetes en esta categoría todavía.</div>}
 
         {visibleItems.map((item, index) => {
           const pending = item.match_status === 'pending_confirmation'
           const purchased = item.status === 'purchased'
-          const accent = pending ? '#3FA9F5' : TONES[index % TONES.length]
+          const accent = purchased ? '#FFD84D' : pending ? '#3FA9F5' : TONES[index % TONES.length]
           return (
-            <article key={item.id} style={{ ...C.card, '--accent':accent, '--soft':`${accent}33` }}>
+            <article key={item.id} style={{ ...C.card, ...(purchased ? C.cardPurchased : {}), '--accent':accent, '--soft':`${accent}33` }}>
               <span style={C.foil} />
               <div style={C.photoWrap}>
-                {item.image_url ? <img src={item.image_url} alt={item.title} style={{ ...C.photo, filter:pending ? 'saturate(.72)' : 'none' }} /> : <span style={C.fallback}><GiftIcon color="#BDF24A" /></span>}
+                {item.image_url ? <img src={item.image_url} alt={item.title} style={{ ...C.photo, filter:purchased ? 'grayscale(.7) saturate(.55)' : pending ? 'saturate(.72)' : 'none' }} /> : <span style={C.fallback}><GiftIcon color="#BDF24A" /></span>}
                 <span style={{ ...C.stamp, color:purchased ? '#FFD84D' : pending ? '#3FA9F5' : '#BDF24A' }}>{purchased ? 'Comprado' : pending ? 'En orbita' : 'Disponible'}</span>
               </div>
               <div style={C.info}>
@@ -220,11 +265,14 @@ export default function PublicWishlist() {
                 {item.price ? <span style={C.price}>{formatPrice(item.price)}</span> : <p style={C.pending}><span style={C.dot} /> Precio por confirmar</p>}
               </div>
               {purchased ? (
-                <span style={C.disabledBtn}>Ya marcado como comprado</span>
+                <div style={C.purchasedBox}>Regalo ya comprado. Gracias por evitar duplicados.</div>
               ) : (
                 <div style={C.actions}>
                   {item.product_url ? (
-                    <a style={C.buyBtn} href={item.product_url} target="_blank" rel="noreferrer">Comprar en RAV</a>
+                    <>
+                      <a style={C.buyBtn} href={item.product_url} target="_blank" rel="noreferrer">Comprar en RAV</a>
+                      <p style={C.buyHint}>Después de comprarlo, vuelve aquí y toca “Ya lo compré”.</p>
+                    </>
                   ) : (
                     <span style={C.disabledBtn}>RAV confirmará este juguete</span>
                   )}
